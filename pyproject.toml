@@ -1,0 +1,61 @@
+[build-system]
+# Explicit build backend declaration so `pip install -e .` works
+# predictably across pip versions. Without this, modern pip still
+# defaults to setuptools but its package-discovery logic differs
+# between versions.
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fictional-cartography"
+version = "0.1.0"
+description = "Stylized parchment maps from real terrain data"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["cartography", "map", "rendering", "terrain", "yaml", "fantasy", "worldbuilding"]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "Pillow>=10.0",
+    "PyYAML>=6.0",
+    "Flask>=3.0",
+]
+
+[project.optional-dependencies]
+# Install via `pip install -e ".[dev]"` for the full Playwright + pytest stack.
+dev = [
+    "pytest>=7.0",
+    "playwright>=1.40",
+]
+
+[project.urls]
+Homepage = "https://github.com/wlcarden/fictional-cartography"
+Source   = "https://github.com/wlcarden/fictional-cartography"
+Issues   = "https://github.com/wlcarden/fictional-cartography/issues"
+
+[project.scripts]
+cartograph = "src.cli:main"
+
+# Tell setuptools to treat `src` as a true package (not the "src layout"
+# container pattern). Without this, default flat-layout discovery
+# registers each subdir of src/ as a top-level module — `cli`, `data`,
+# `furniture` — which breaks `from src.cli import main` in the entry
+# point script.
+[tool.setuptools.packages.find]
+include = ["src", "src.*"]
+
+# pytest configuration. The tests/playwright/ directory contains
+# stand-alone Playwright scripts (run via with_server.py), NOT pytest
+# test files. We only want pytest to discover the unit tests in
+# tests/test_*.py at the top level of tests/.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["tests/playwright"]
+# TestRun is a helper class in tests/playwright/helpers.py — its name
+# starts with "Test" but it isn't a test class. Suppress the
+# auto-collection warning.
+python_classes = ["Test*"]
+filterwarnings = [
+    "ignore::pytest.PytestCollectionWarning",
+]

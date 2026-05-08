@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cartograph — Render</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink:        #13100b;
+  --ink-1:      #181410;
+  --ink-2:      #1f1a14;
+  --ink-3:      #261f18;
+  --rule:       #2d2620;
+  --rule-2:     #3a3127;
+
+  --bone:       #ded2ba;
+  --bone-2:     #c2b699;
+  --bone-dim:   #8b8270;
+  --bone-faint: #5b5448;
+
+  --brass:        #b88a3c;
+  --brass-bright: #e0b160;
+  --brass-deep:   #7a5a23;
+
+  --blood:      #8a3a30;
+  --leaf:       #6b8033;
+
+  --serif: "Fraunces", "Times New Roman", serif;
+  --mono:  "IBM Plex Mono", ui-monospace, "Menlo", monospace;
+
+  --rail-r: 380px;
+  --top:    52px;
+  --bot:    26px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+.topbar {
+  height: var(--top);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink-1);
+  position: relative; z-index: 10;
+}
+.brand {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  border-right: 1px solid var(--rule);
+}
+.brand__mark {
+  width: 26px; height: 26px;
+  border: 1px solid var(--brass);
+  display: grid; place-items: center;
+  font-family: var(--serif); font-size: 13px;
+  color: var(--brass-bright);
+  font-style: italic;
+}
+.brand__name {
+  font-family: var(--mono); font-weight: 500;
+  letter-spacing: 0.32em; font-size: 11px; color: var(--bone);
+}
+.brand__name em {
+  color: var(--bone-faint); font-style: normal; margin-left: 6px;
+}
+
+.modes {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 0; justify-self: start;
+}
+.modes__sep {
+  width: 1px; height: 14px; background: var(--rule-2); margin: 0 14px;
+  align-self: center;
+}
+.mode {
+  background: none; border: none; color: var(--bone-dim);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
+  padding: 6px 14px; text-transform: uppercase;
+  position: relative; cursor: pointer;
+  text-decoration: none;
+}
+.mode:hover { color: var(--bone-2); }
+.mode[aria-disabled="true"] {
+  color: var(--bone-faint); opacity: 0.45; cursor: not-allowed;
+  font-style: italic;
+}
+.mode[aria-disabled="true"]:hover { color: var(--bone-faint); }
+.mode.is-active { color: var(--brass-bright); }
+.mode.is-active::after {
+  content: "";
+  position: absolute; bottom: -1px; left: 14px; right: 14px;
+  height: 2px; background: var(--brass);
+}
+.mode__num {
+  display: inline-block; opacity: 0.55; margin-right: 8px; font-size: 9.5px;
+  color: var(--bone-faint);
+}
+.mode.is-active .mode__num { color: var(--brass-deep); opacity: 1; }
+
+.project {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 14px; border-left: 1px solid var(--rule);
+  position: relative;
+}
+.project-switcher {
+  background: none; border: 1px solid var(--rule-2); color: var(--bone);
+  padding: 6px 12px; cursor: pointer; min-width: 220px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  text-transform: uppercase; text-align: left;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.project-switcher:hover { border-color: var(--brass-deep); color: var(--brass-bright); }
+.project-switcher__caret { color: var(--bone-faint); font-size: 9px; }
+.dropdown {
+  position: absolute; top: calc(100% - 1px); right: 18px;
+  min-width: 240px; max-width: 320px;
+  background: var(--ink-1); border: 1px solid var(--rule-2);
+  display: flex; flex-direction: column;
+  z-index: 20;
+}
+.dropdown[hidden] { display: none; }
+.dropdown__item {
+  background: none; border: none; color: var(--bone-dim);
+  text-align: left; padding: 9px 14px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; border-bottom: 1px solid var(--rule);
+}
+.dropdown__item:hover { background: var(--ink-2); color: var(--bone); }
+.dropdown__item.is-active { color: var(--brass-bright); }
+.dropdown__item:last-child { border-bottom: none; }
+.online {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.online .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--bone-faint); display: inline-block;
+}
+.online.is-online .dot { background: var(--leaf); }
+.online.is-error  .dot { background: var(--blood); }
+
+main.canvas {
+  display: grid;
+  grid-template-columns: 1fr var(--rail-r);
+  height: calc(100vh - var(--top) - var(--bot));
+}
+
+.canvas-section {
+  position: relative;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(ellipse at center, rgba(255,200,140,0.05) 0%, transparent 60%),
+    var(--ink);
+  overflow: hidden;
+  padding: 48px;
+}
+.plate-wrap { position: relative; max-width: 100%; max-height: 100%; }
+.plate {
+  position: relative;
+  max-width: 100%; max-height: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--ink-2);
+  box-shadow:
+    0 0 0 1px var(--rule),
+    0 32px 64px -22px rgba(0,0,0,0.85);
+}
+.plate img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.plate__caption {
+  position: absolute;
+  bottom: -22px; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.plate-mark {
+  position: absolute; width: 20px; height: 20px;
+  border: 1px solid var(--brass-deep);
+  pointer-events: none;
+}
+.plate-mark--tl { top: -1px; left: -1px;  border-right: 0; border-bottom: 0; }
+.plate-mark--tr { top: -1px; right: -1px; border-left: 0;  border-bottom: 0; }
+.plate-mark--bl { bottom: -1px; left: -1px;  border-right: 0; border-top: 0; }
+.plate-mark--br { bottom: -1px; right: -1px; border-left: 0;  border-top: 0; }
+
+/* big "Rendering..." overlay during async render */
+.plate__overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(19, 16, 11, 0.78);
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.2s;
+}
+.plate__overlay.is-on { opacity: 1; pointer-events: auto; }
+.plate__overlay-inner {
+  text-align: center;
+  color: var(--brass-bright);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 22px;
+  font-variation-settings: "opsz" 60, "SOFT" 40;
+}
+.plate__overlay-sub {
+  margin-top: 6px;
+  font-family: var(--mono); font-style: normal;
+  font-size: 10px; letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+.plate__overlay-spinner {
+  margin: 18px auto 0;
+  width: 28px; height: 28px;
+  border: 2px solid var(--rule-2);
+  border-top-color: var(--brass);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.inspector {
+  border-left: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+.inspector__head {
+  padding: 18px 22px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.inspector__eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 8px;
+}
+.inspector__title {
+  font-family: var(--serif);
+  font-size: 30px; line-height: 1; letter-spacing: -0.005em;
+  font-weight: 400;
+  font-variation-settings: "opsz" 96, "SOFT" 25, "WONK" 1;
+  color: var(--bone); margin: 0 0 6px;
+}
+.inspector__sub {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px; color: var(--bone-dim);
+  font-variation-settings: "SOFT" 50;
+}
+.inspector__body { overflow-y: auto; flex: 1; }
+
+fieldset.section {
+  border: 0; padding: 18px 22px 14px; margin: 0;
+  border-bottom: 1px solid var(--rule);
+}
+fieldset.section legend {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-dim);
+  margin-bottom: 14px; padding: 0;
+  width: 100%; display: flex; align-items: center;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 6px 0;
+}
+.row__label {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.row__num {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--bone); text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+}
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 2px; background: var(--rule-2);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--brass); cursor: pointer;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--brass-deep);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--brass); cursor: pointer;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--brass-deep);
+}
+
+/* segmented picker for scale/format */
+.segmented {
+  display: grid; gap: 0;
+  border: 1px solid var(--rule-2);
+  background: var(--ink-2);
+}
+.segmented button {
+  background: none; border: none; cursor: pointer;
+  color: var(--bone-dim);
+  padding: 10px 6px;
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  border-right: 1px solid var(--rule-2);
+  transition: color 0.12s, background 0.12s;
+}
+.segmented button:last-child { border-right: 0; }
+.segmented button:hover { color: var(--bone); }
+.segmented button.is-active {
+  color: var(--brass-bright);
+  background: var(--ink-3);
+  box-shadow: inset 0 -2px 0 var(--brass);
+}
+
+.stat-grid {
+  display: grid; gap: 6px 14px;
+  grid-template-columns: auto 1fr;
+  font-family: var(--mono); font-size: 11px;
+  align-items: baseline;
+}
+.stat-grid dt {
+  color: var(--bone-faint);
+  letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 9.5px;
+}
+.stat-grid dd {
+  margin: 0; color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+.stat-grid dd.is-empty { color: var(--bone-faint); font-style: italic; }
+
+.inspector__foot {
+  padding: 14px 22px;
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: grid; gap: 10px;
+}
+.btn {
+  background: var(--brass);
+  color: var(--ink);
+  border: 1px solid var(--brass-deep);
+  padding: 11px 16px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  font-weight: 500;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn:hover { background: var(--brass-bright); }
+.btn:disabled, .btn.is-disabled {
+  background: var(--rule-2);
+  color: var(--bone-faint);
+  border-color: var(--rule-2);
+  cursor: not-allowed;
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--bone-2);
+  border: 1px solid var(--rule-2);
+}
+.btn--ghost:hover { color: var(--bone); border-color: var(--bone-faint); }
+.btn--ghost.is-disabled { color: var(--bone-faint); }
+
+.statusbar {
+  height: var(--bot);
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0 18px;
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--bone-faint);
+  gap: 24px;
+}
+.statusbar b { color: var(--bone-2); font-weight: 500; }
+.statusbar .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brass); display: inline-block; margin-right: 8px;
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark">C</span>
+    <span class="brand__name">CARTOGRAPH <em>DRAFT</em></span>
+  </div>
+
+  <nav class="modes" id="modesNav">
+    <a class="mode" data-route="/setup"><span class="mode__num">01</span>Setup</a>
+    <a class="mode" data-route="/paint"><span class="mode__num">02</span>Terrain</a>
+    <a class="mode" data-route="/place"><span class="mode__num">03</span>Places</a>
+    <a class="mode" data-route="/routes"><span class="mode__num">04</span>Routes</a>
+    <a class="mode" data-route="/narrative"><span class="mode__num">05</span>Narrative</a>
+    <a class="mode" data-route="/decoration"><span class="mode__num">06</span>Decoration</a>
+    <span class="modes__sep"></span>
+    <a class="mode is-active" data-route="/render"><span class="mode__num">07</span>Render</a>
+  </nav>
+
+  <div class="project">
+    <button class="project-switcher" id="projectSwitcher" aria-haspopup="true" aria-expanded="false">
+      <span id="projectName">jersea-wastes</span>
+      <span class="project-switcher__caret">▼</span>
+    </button>
+    <div class="dropdown" id="projectDropdown" hidden></div>
+    <span class="online" id="onlineIndicator"><span class="dot"></span><span id="onlineLabel">offline</span></span>
+  </div>
+</header>
+
+<main class="canvas">
+  <section class="canvas-section">
+    <div class="plate-wrap">
+      <div class="plate" id="plate">
+        <span class="plate-mark plate-mark--tl"></span>
+        <span class="plate-mark plate-mark--tr"></span>
+        <span class="plate-mark plate-mark--bl"></span>
+        <span class="plate-mark plate-mark--br"></span>
+        <img id="map" alt="last render preview" />
+        <div class="plate__overlay" id="renderOverlay">
+          <div class="plate__overlay-inner">
+            <div id="overlayHeading">Rendering…</div>
+            <div class="plate__overlay-sub" id="overlaySub">stage 1 of 4</div>
+            <div class="plate__overlay-spinner"></div>
+          </div>
+        </div>
+      </div>
+      <div class="plate__caption">
+        <span id="captionLeft">canvas stage · last preview</span>
+        <span id="captionRight">— · — · —</span>
+      </div>
+    </div>
+  </section>
+
+  <aside class="inspector">
+    <header class="inspector__head">
+      <div class="inspector__eyebrow">Render · Final output</div>
+      <h2 class="inspector__title">Export</h2>
+      <p class="inspector__sub">Pick a preset for the common cases, or open Custom for full control.</p>
+    </header>
+
+    <div class="inspector__body">
+
+      <fieldset class="section">
+        <legend>Preset
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">one-click</span>
+        </legend>
+        <div class="segmented" id="presetPicker" style="grid-template-columns: 1fr 1fr;">
+          <button data-preset="discord">Discord · WebP</button>
+          <button data-preset="print-a2">Print A2 · TIFF 300dpi</button>
+          <button data-preset="archive">Archive · PNG 4×</button>
+          <button data-preset="working" class="is-active">Working · PNG 1×</button>
+        </div>
+        <div style="margin-top: 10px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;" id="presetHint">
+          Working: 1× PNG. Same as the editor preview, fastest render.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Scale
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">resolution multiplier</span>
+        </legend>
+        <div class="segmented" id="scalePicker" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+          <button data-scale="1" class="is-active">1×</button>
+          <button data-scale="2">2×</button>
+          <button data-scale="4">4×</button>
+          <button data-scale="8">8×</button>
+        </div>
+        <div style="margin-top: 10px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          1× ≈ 2 000×2 700 px (working). 4× ≈ 8 000×10 800 px (A2-print). 8× = ultra-fine, ~30-60 s. Stage 1 cache is reused across scales.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Format
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">file type</span>
+        </legend>
+        <div class="segmented" id="formatPicker" style="grid-template-columns: repeat(5, 1fr);">
+          <button data-format="png" class="is-active">PNG</button>
+          <button data-format="jpg">JPEG</button>
+          <button data-format="webp">WebP</button>
+          <button data-format="tiff">TIFF</button>
+          <button data-format="pdf">PDF</button>
+        </div>
+
+        <div id="qualityRow" hidden style="margin-top: 14px;">
+          <div class="row">
+            <span class="row__label">Quality</span>
+            <input type="range" id="rngQuality" min="60" max="100" step="1" value="88">
+            <span class="row__num" id="numQuality">88</span>
+          </div>
+          <div style="margin-top: 6px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;" id="qualityHint">
+            JPEG quality 88 is Discord-ready (~2-3 MB at 1×). Below 75 starts visibly compressing terrain texture.
+          </div>
+        </div>
+
+        <div id="dpiRow" hidden style="margin-top: 14px;">
+          <div class="row">
+            <span class="row__label">DPI</span>
+            <input type="number" id="numDpi" min="72" max="1200" step="1" value="300"
+                   style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+            <span style="margin-left: 12px; color: var(--bone-faint); font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;">embedded hint</span>
+          </div>
+          <div style="margin-top: 6px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+            300 DPI is the standard for print. Most home printers downsample anything above 600. The pixel count doesn't change — only the physical-size hint embedded in the file.
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Options</legend>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkReference" style="margin: 0;">
+          <label for="chkReference" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Reference overlays</label>
+        </div>
+        <div style="margin-top: 4px; margin-bottom: 12px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Show real-world state borders + reference cities for cross-checking against geography.
+        </div>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkMetadata" style="margin: 0;">
+          <label for="chkMetadata" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Embed metadata</label>
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Map name, subtitle, credit, and render timestamp embedded in the file (EXIF / PNG tEXt / TIFF / PDF info).
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Stages
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">layered downloads</span>
+        </legend>
+        <div id="stageList" style="display: grid; gap: 6px; font-family: var(--mono); font-size: 11px;">
+          <div class="is-empty" style="color: var(--bone-faint); font-style: italic;">render once to populate</div>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Recent renders
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">this session</span>
+        </legend>
+        <div id="historyList" style="display: grid; gap: 8px; font-family: var(--mono); font-size: 11px;">
+          <div class="is-empty" style="color: var(--bone-faint); font-style: italic;">no renders yet</div>
+        </div>
+      </fieldset>
+
+    </div>
+
+    <footer class="inspector__foot">
+      <button class="btn" id="btnRender">Render</button>
+      <a class="btn btn--ghost is-disabled" id="btnDownload" href="#">Download · waiting for render</a>
+    </footer>
+  </aside>
+</main>
+
+<footer class="statusbar">
+  <div>
+    <span class="dot"></span>
+    <span id="renderState">Ready</span>
+  </div>
+  <div></div>
+  <div>
+    <span>config / <b id="statusConfig">jersea-wastes.yaml</b></span>
+  </div>
+</footer>
+
+<div class="grain"></div>
+
+<script>
+// -----------------------------------------------------------------------------
+// Render mode prototype.
+// Triggers /api/render with {scale, format, quality}, surfaces last-render
+// stats, and links to /api/output/<name>.<ext> for download. The render call
+// is synchronous on the server side — this UI just shows a "rendering..."
+// overlay + spinner during the wait.
+// -----------------------------------------------------------------------------
+
+let CONFIG_NAME = (new URLSearchParams(location.search).get('project')) || 'jersea-wastes';
+let CONFIG_LIST = [];
+let ONLINE = false;
+
+let SCALE     = 1;
+let FORMAT    = 'png';
+let QUALITY   = 88;
+let DPI       = null;       // null = no DPI hint embedded
+let REFERENCE = false;
+let METADATA  = false;
+let PRESET    = 'working';
+
+const HISTORY_KEY = 'cartograph.render.history.v1';
+const HISTORY_MAX = 5;
+let RENDER_HISTORY = loadHistory();   // [{format, ext, scale, total_ms, output_url, output_size, output_path, ts, project}]
+let LAST_RESULT    = null;            // freshest entry; mirrored from RENDER_HISTORY[0] when available
+
+// Preset definitions. Each preset specifies the knob values it sets and a
+// short hint shown under the preset picker. The "custom" pseudo-preset is
+// what we land on when the user changes a knob away from any defined preset.
+const PRESETS = {
+  'discord':  { scale: 1, format: 'webp', quality: 88, dpi: null, reference: false, metadata: false,
+                hint: 'Discord-ready WebP (~1-2 MB at 1×). Smaller than JPEG at equal quality; supported in modern Discord clients.' },
+  'print-a2': { scale: 4, format: 'tiff', quality: 88, dpi: 300, reference: false, metadata: true,
+                hint: 'A2 (420×594mm) at 300 DPI. LZW-compressed TIFF, ~30-60 MB. Embeds title/credit/timestamp for the print shop.' },
+  'archive':  { scale: 4, format: 'png',  quality: 88, dpi: null, reference: false, metadata: true,
+                hint: 'Lossless PNG at 4× scale. ~150 MB. The canonical "master copy" — re-derive other formats from this.' },
+  'working':  { scale: 1, format: 'png',  quality: 88, dpi: null, reference: false, metadata: false,
+                hint: 'Working: 1× PNG. Same as the editor preview, fastest render.' },
+};
+
+const PREVIEW_STAGE = 'canvas';
+
+async function fetchPreviewUrl(slug, stage = PREVIEW_STAGE) {
+  for (const s of [stage, 'final']) {
+    try {
+      const r = await fetch(`/api/stage-preview/${slug}/${s}`);
+      if (r.ok) return (await r.json()).url;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+function setOnlineIndicator(state, msg) {
+  const el  = document.getElementById('onlineIndicator');
+  const lbl = document.getElementById('onlineLabel');
+  el.classList.toggle('is-online', state === 'online');
+  el.classList.toggle('is-error',  state === 'error');
+  lbl.textContent = msg || (state === 'online' ? 'online' : (state === 'error' ? 'error' : 'offline'));
+}
+function setRenderState(msg) {
+  document.getElementById('renderState').textContent = msg || 'Ready';
+}
+
+function setOverlay(on, heading, sub) {
+  const ov = document.getElementById('renderOverlay');
+  ov.classList.toggle('is-on', !!on);
+  if (heading) document.getElementById('overlayHeading').textContent = heading;
+  if (sub != null) document.getElementById('overlaySub').textContent = sub;
+}
+
+function fmtBytes(n) {
+  if (!n) return '—';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+function fmtMs(ms) {
+  if (!Number.isFinite(ms)) return '—';
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(2)} s`;
+}
+
+// ─── Render history (persisted to localStorage) ──────────────────────────
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, HISTORY_MAX) : [];
+  } catch { return []; }
+}
+function saveHistory() {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(RENDER_HISTORY.slice(0, HISTORY_MAX)));
+  } catch { /* localStorage full or disabled — not critical */ }
+}
+function pushHistory(entry) {
+  // Newest first. Don't dedupe — a re-render of the same config/preset is
+  // worth showing because the user might be iterating on the YAML.
+  RENDER_HISTORY.unshift({
+    ...entry,
+    ts: Date.now(),
+    project: CONFIG_NAME,
+  });
+  RENDER_HISTORY = RENDER_HISTORY.slice(0, HISTORY_MAX);
+  saveHistory();
+  renderHistoryList();
+}
+function renderHistoryList() {
+  const list = document.getElementById('historyList');
+  if (!list) return;
+  list.innerHTML = '';
+  // Show only renders for the current project — switching projects shouldn't
+  // dump someone else's render history into this page's list.
+  const mine = RENDER_HISTORY.filter(r => r.project === CONFIG_NAME);
+  if (mine.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'is-empty';
+    empty.style.cssText = 'color: var(--bone-faint); font-style: italic;';
+    empty.textContent = 'no renders yet';
+    list.appendChild(empty);
+    return;
+  }
+  for (const r of mine) {
+    const row = document.createElement('a');
+    row.href = r.output_url;
+    row.setAttribute('download', '');
+    row.style.cssText = [
+      'display: grid',
+      'grid-template-columns: auto 1fr auto',
+      'gap: 10px',
+      'align-items: baseline',
+      'padding: 6px 8px',
+      'background: var(--ink-2)',
+      'border: 1px solid var(--rule-2)',
+      'color: var(--bone)',
+      'text-decoration: none',
+      'font-variant-numeric: tabular-nums',
+    ].join(';');
+    const fmt = document.createElement('span');
+    fmt.style.cssText = 'color: var(--brass-bright); letter-spacing: 0.16em; text-transform: uppercase; font-size: 10px;';
+    fmt.textContent = `${(r.format || '').toUpperCase()} ${r.scale}×`;
+    const path = document.createElement('span');
+    path.style.cssText = 'color: var(--bone-dim); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+    path.textContent = r.output_path || r.output_url;
+    const size = document.createElement('span');
+    size.style.cssText = 'color: var(--bone-dim); font-size: 10.5px;';
+    size.textContent = fmtBytes(r.output_size);
+    row.appendChild(fmt);
+    row.appendChild(path);
+    row.appendChild(size);
+    list.appendChild(row);
+  }
+}
+
+function updateCaption() {
+  const cap = document.getElementById('captionRight');
+  if (!cap) return;
+  if (!LAST_RESULT) {
+    cap.textContent = '';
+    return;
+  }
+  const r = LAST_RESULT;
+  cap.textContent = `${r.format.toUpperCase()} · ${r.scale}× · ${fmtBytes(r.output_size)}`;
+}
+
+function setDownloadState(enabled, label) {
+  const a = document.getElementById('btnDownload');
+  a.classList.toggle('is-disabled', !enabled);
+  a.textContent = label || (enabled ? 'Download' : 'Download · waiting for render');
+  if (enabled && LAST_RESULT) {
+    a.href = LAST_RESULT.output_url;
+    a.setAttribute('download', '');
+  } else {
+    a.removeAttribute('download');
+    a.href = '#';
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Render action
+// -----------------------------------------------------------------------------
+
+async function doRender() {
+  if (!ONLINE) {
+    alert("Backend isn't reachable. Run:\n\n    python3 -m src.server\n\nthen reload this page.");
+    return;
+  }
+  const btn = document.getElementById('btnRender');
+  btn.disabled = true;
+  btn.textContent = 'Rendering…';
+
+  const sub = SCALE === 1 ? 'expect ~1-2 s'
+            : SCALE === 2 ? 'expect ~3-6 s'
+            : SCALE === 4 ? 'expect ~10-30 s'
+            : 'expect ~30-60 s';
+  setOverlay(true, `Rendering ${SCALE}× ${FORMAT.toUpperCase()}…`, sub);
+  setRenderState(`Rendering ${SCALE}×…`);
+
+  // Build the request body. Quality is meaningful for lossy formats only;
+  // DPI applies to formats that store a physical-size hint; metadata flag
+  // gates EXIF/PNG-tEXt/TIFF/PDF info embedding.
+  const body = { scale: SCALE, format: FORMAT };
+  if (FORMAT === 'jpg' || FORMAT === 'jpeg' || FORMAT === 'webp') {
+    body.quality = QUALITY;
+  }
+  if (DPI != null && DPI > 0) body.dpi = DPI;
+  if (REFERENCE) body.reference = true;
+  if (METADATA)  body.embed_metadata = true;
+
+  try {
+    const res = await fetch(`/api/render/${CONFIG_NAME}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`render ${res.status}: ${text.slice(0, 120)}`);
+    }
+    LAST_RESULT = await res.json();
+
+    // Refresh the small preview alongside.
+    const previewUrl = (await fetchPreviewUrl(CONFIG_NAME)) || LAST_RESULT.url;
+    document.getElementById('map').src = previewUrl;
+
+    pushHistory(LAST_RESULT);
+    updateCaption();
+    setDownloadState(true, `Download ${(LAST_RESULT.extension || FORMAT).toUpperCase()} · ${fmtBytes(LAST_RESULT.output_size)}`);
+    setRenderState(`Rendered in ${fmtMs(LAST_RESULT.total_ms)}`);
+    refreshStageList();
+  } catch (e) {
+    console.error('[render] failed', e);
+    setRenderState(`Error: ${e.message}`);
+    alert(`Render failed:\n${e.message}`);
+  } finally {
+    setOverlay(false);
+    btn.disabled = false;
+    btn.textContent = 'Render';
+  }
+}
+
+// ─── Per-stage download list ─────────────────────────────────────────────
+async function refreshStageList() {
+  const list = document.getElementById('stageList');
+  if (!list) return;
+  try {
+    const r = await fetch(`/api/stages/${CONFIG_NAME}`);
+    if (!r.ok) return;
+    const stages = await r.json();
+    list.innerHTML = '';
+    const labels = {
+      'terrain_styled': 'Terrain only',
+      'canvas_roads':   'Terrain + roads',
+      'final':          'Final composite',
+    };
+    let any = false;
+    for (const s of stages) {
+      if (!s.available) continue;
+      any = true;
+      const a = document.createElement('a');
+      a.href = `/api/stage-output/${CONFIG_NAME}/${s.stage}`;
+      a.setAttribute('download', '');
+      a.style.cssText = [
+        'display: grid',
+        'grid-template-columns: 1fr auto',
+        'gap: 10px',
+        'align-items: baseline',
+        'padding: 6px 8px',
+        'background: var(--ink-2)',
+        'border: 1px solid var(--rule-2)',
+        'color: var(--bone)',
+        'text-decoration: none',
+      ].join(';');
+      const lbl = document.createElement('span');
+      lbl.textContent = labels[s.stage] || s.stage;
+      const size = document.createElement('span');
+      size.style.cssText = 'color: var(--bone-dim); font-size: 10.5px;';
+      size.textContent = fmtBytes(s.size);
+      a.appendChild(lbl);
+      a.appendChild(size);
+      list.appendChild(a);
+    }
+    if (!any) {
+      const empty = document.createElement('div');
+      empty.className = 'is-empty';
+      empty.style.cssText = 'color: var(--bone-faint); font-style: italic;';
+      empty.textContent = 'render once to populate';
+      list.appendChild(empty);
+    }
+  } catch { /* offline — leave the empty placeholder */ }
+}
+
+// ─── Preset application ──────────────────────────────────────────────────
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  PRESET = name;
+  SCALE     = p.scale;
+  FORMAT    = p.format;
+  QUALITY   = p.quality;
+  DPI       = p.dpi;
+  REFERENCE = p.reference;
+  METADATA  = p.metadata;
+
+  // Reflect in the segmented pickers + checkboxes.
+  for (const b of document.querySelectorAll('#presetPicker button')) {
+    b.classList.toggle('is-active', b.dataset.preset === name);
+  }
+  for (const b of document.querySelectorAll('#scalePicker button')) {
+    b.classList.toggle('is-active', Number(b.dataset.scale) === SCALE);
+  }
+  for (const b of document.querySelectorAll('#formatPicker button')) {
+    b.classList.toggle('is-active', b.dataset.format === FORMAT);
+  }
+  document.getElementById('chkReference').checked = REFERENCE;
+  document.getElementById('chkMetadata').checked  = METADATA;
+  if (DPI) document.getElementById('numDpi').value = DPI;
+  document.getElementById('rngQuality').value = QUALITY;
+  document.getElementById('numQuality').textContent = String(QUALITY);
+  document.getElementById('presetHint').textContent = p.hint;
+  refreshFormatRows();
+}
+
+// Quality slider visible for lossy formats; DPI input visible for formats
+// that meaningfully store a physical-size hint.
+function refreshFormatRows() {
+  const lossy = (FORMAT === 'jpg' || FORMAT === 'jpeg' || FORMAT === 'webp');
+  document.getElementById('qualityRow').hidden = !lossy;
+  const dpiable = (FORMAT === 'tiff' || FORMAT === 'tif' || FORMAT === 'pdf' || FORMAT === 'png');
+  document.getElementById('dpiRow').hidden = !dpiable;
+}
+
+// When the user pokes a knob away from the active preset, deselect the
+// preset chip so they can see they're now in custom territory.
+function dropPresetSelection() {
+  PRESET = 'custom';
+  for (const b of document.querySelectorAll('#presetPicker button')) {
+    b.classList.remove('is-active');
+  }
+  document.getElementById('presetHint').textContent =
+    'Custom: knob values diverge from any preset.';
+}
+
+// -----------------------------------------------------------------------------
+// Project switcher + boot
+// -----------------------------------------------------------------------------
+
+function renderConfigList() {
+  const dd = document.getElementById('projectDropdown');
+  dd.innerHTML = '';
+  for (const name of CONFIG_LIST) {
+    const b = document.createElement('button');
+    b.className = 'dropdown__item' + (name === CONFIG_NAME ? ' is-active' : '');
+    b.textContent = name;
+    b.addEventListener('click', () => {
+      const url = new URL(location.href);
+      url.searchParams.set('project', name);
+      location.href = url.toString();
+    });
+    dd.appendChild(b);
+  }
+}
+function openDropdown()   { document.getElementById('projectDropdown').hidden = false; document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'true');  }
+function closeDropdown()  { document.getElementById('projectDropdown').hidden = true;  document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'false'); }
+function toggleDropdown() { document.getElementById('projectDropdown').hidden ? openDropdown() : closeDropdown(); }
+
+async function tryConnectServer() {
+  try {
+    const listR = await fetch('/api/configs');
+    if (!listR.ok) throw new Error('api unavailable');
+    CONFIG_LIST = await listR.json();
+
+    document.getElementById('projectName').textContent  = CONFIG_NAME;
+    document.getElementById('statusConfig').textContent = `${CONFIG_NAME}.yaml`;
+
+    const previewUrl = await fetchPreviewUrl(CONFIG_NAME);
+    if (previewUrl) document.getElementById('map').src = previewUrl;
+
+    ONLINE = true;
+    setOnlineIndicator('online');
+    renderConfigList();
+    refreshStageList();
+  } catch (e) {
+    console.log(`[render] offline: ${e.message}`);
+    ONLINE = false;
+    setOnlineIndicator('error', 'offline');
+  }
+  renderHistoryList();
+  setDownloadState(false);
+  // Apply the default preset (Working) on first load. The "is-active"
+  // class on the corresponding chip is set in markup.
+  applyPreset(PRESET);
+}
+
+// -----------------------------------------------------------------------------
+// Wiring
+// -----------------------------------------------------------------------------
+
+document.getElementById('projectSwitcher').addEventListener('click', toggleDropdown);
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#projectSwitcher') && !ev.target.closest('#projectDropdown')) {
+    closeDropdown();
+  }
+});
+
+for (const link of document.querySelectorAll('#modesNav a[data-route]')) {
+  const route = link.dataset.route;
+  if (!route || route === '#') {
+    link.addEventListener('click', (ev) => ev.preventDefault());
+    continue;
+  }
+  const url = new URL(route, location.origin);
+  url.searchParams.set('project', CONFIG_NAME);
+  link.href = url.pathname + url.search;
+}
+
+document.getElementById('presetPicker').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-preset]');
+  if (!btn) return;
+  applyPreset(btn.dataset.preset);
+});
+
+document.getElementById('scalePicker').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-scale]');
+  if (!btn) return;
+  SCALE = Number(btn.dataset.scale);
+  for (const b of document.querySelectorAll('#scalePicker button')) {
+    b.classList.toggle('is-active', b.dataset.scale === btn.dataset.scale);
+  }
+  dropPresetSelection();
+});
+
+document.getElementById('formatPicker').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-format]');
+  if (!btn) return;
+  FORMAT = btn.dataset.format;
+  for (const b of document.querySelectorAll('#formatPicker button')) {
+    b.classList.toggle('is-active', b.dataset.format === btn.dataset.format);
+  }
+  refreshFormatRows();
+  dropPresetSelection();
+});
+
+document.getElementById('rngQuality').addEventListener('input', (ev) => {
+  QUALITY = Number(ev.target.value);
+  document.getElementById('numQuality').textContent = String(QUALITY);
+  dropPresetSelection();
+});
+
+document.getElementById('numDpi').addEventListener('input', (ev) => {
+  const v = Number(ev.target.value);
+  DPI = Number.isFinite(v) && v > 0 ? v : null;
+  dropPresetSelection();
+});
+
+document.getElementById('chkReference').addEventListener('change', (ev) => {
+  REFERENCE = ev.target.checked;
+  dropPresetSelection();
+});
+
+document.getElementById('chkMetadata').addEventListener('change', (ev) => {
+  METADATA = ev.target.checked;
+  dropPresetSelection();
+});
+
+document.getElementById('btnRender').addEventListener('click', doRender);
+
+tryConnectServer();
+</script>
+</body>
+</html>

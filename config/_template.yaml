@@ -1,0 +1,125 @@
+# Map Template
+# Copy this file, rename it, and fill in your map's details.
+# See config/jersea-wastes.yaml for a complete example.
+
+name: "Your Map Title"
+subtitle: "Subtitle or Attribution"
+credit: "In-world credit line"
+
+bounds:
+  lat_n: 41.0      # northern extent
+  lat_s: 38.5      # southern extent
+  lon_w: -78.0      # western extent
+  lon_e: -75.0      # eastern extent
+  aspect_ratio: "3:4"   # portrait, or "4:3" for landscape, or "1:1"
+
+terrain:
+  sea_level_rise: 0     # meters of sea level rise (0 = no flooding)
+  downsample: 4         # 4 for iteration, 1 for final render
+  palette:
+    low:  [0.80, 0.70, 0.48]
+    mid:  [0.72, 0.65, 0.44]
+    high: [0.56, 0.54, 0.48]
+    mid_break: 0.3
+  water:
+    shallow: [0.58, 0.60, 0.58]
+    deep:    [0.36, 0.40, 0.44]
+    depth_range: 50
+  shade:
+    sun_altitude: 35
+    sun_azimuth: 315
+    floor: 0.3
+  noise:
+    drift_sigma: 60
+    drift_strength: 0.06
+    scorch_sigma: 25
+    scorch_strength: 0.08
+  vignette:
+    strength: 0.40
+    floor: 0.50
+  coastline_darken:
+    dilation: 3
+    factor: 0.70
+  wasteland_wash:
+    desaturate: 0.12
+    warm_push_r: 0.015
+    cool_push_b: -0.010
+
+roads:
+  networks: ["US:I", "US:US"]
+  styles:
+    interstate:
+      color: [170, 145, 100]
+      width: 3
+      shadow_width: 1
+    us_highway:
+      color: [160, 145, 115]
+      width: 2
+      shadow_width: 1
+  shadow_color: [45, 38, 28]
+  mask_by_water: true
+
+urbanization:
+  enabled: true
+  blend_strength: 0.60
+  color: [0.48, 0.46, 0.44]
+
+state_boundaries:
+  enabled: false
+  highlight: ""
+  highlight_color: [255, 210, 70, 200]
+  other_color: [170, 170, 190, 70]
+  states: []
+
+regions: []
+  # - name: "Region Name"
+  #   type: region_label     # or tint_only
+  #   center: [lat, lon]
+  #   color: [r, g, b]
+  #   subtitle: "Optional subtitle"
+  #   tint:
+  #     center: [lat, lon]
+  #     inner_radius: 0.0
+  #     outer_radius: 0.5
+  #     desaturate: 0.0       # 0-1
+  #     adjustments: {r: 0.0, g: 0.0, b: 0.0}
+  #     strength: 1.0
+
+settlements: []
+  # - name: "Settlement Name"
+  #   lat: 40.0
+  #   lon: -75.0
+  #   color: gold            # or [r, g, b]
+  #   radius: 10             # marker size (0 = text only)
+  #   font: settle           # major, settle, minor
+  #   note: "Description"
+  #   label_side: right      # right, left, above, below
+
+edge_indicators: []
+infrastructure: []
+water_labels: []
+
+legend:
+  entries:
+    - type: circle
+      color: gold
+      label: "Settlement"
+
+canvas:
+  border: 100
+  paper_color: [210, 190, 150]
+
+colors:
+  gold:  [230, 190, 80]
+  cyan:  [150, 200, 220]
+  red:   [220, 120, 80]
+  green: [130, 200, 110]
+  white: [235, 225, 200]
+  grey:  [175, 170, 160]
+  parch: [200, 190, 170]
+  water: [140, 160, 175]
+  shadow: [30, 25, 18]
+
+reference_cities:
+  enabled: false
+  cities: []

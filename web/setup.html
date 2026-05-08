@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cartograph — Setup</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink:        #13100b;
+  --ink-1:      #181410;
+  --ink-2:      #1f1a14;
+  --ink-3:      #261f18;
+  --rule:       #2d2620;
+  --rule-2:     #3a3127;
+
+  --bone:       #ded2ba;
+  --bone-2:     #c2b699;
+  --bone-dim:   #8b8270;
+  --bone-faint: #5b5448;
+
+  --brass:        #b88a3c;
+  --brass-bright: #e0b160;
+  --brass-deep:   #7a5a23;
+
+  --blood:      #8a3a30;
+  --leaf:       #6b8033;
+
+  --serif: "Fraunces", "Times New Roman", serif;
+  --mono:  "IBM Plex Mono", ui-monospace, "Menlo", monospace;
+
+  --rail-r: 380px;
+  --top:    52px;
+  --bot:    26px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* topbar — same as other pages */
+.topbar {
+  height: var(--top);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink-1);
+  position: relative; z-index: 10;
+}
+.brand {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  border-right: 1px solid var(--rule);
+}
+.brand__mark {
+  width: 26px; height: 26px;
+  border: 1px solid var(--brass);
+  display: grid; place-items: center;
+  font-family: var(--serif); font-size: 13px;
+  color: var(--brass-bright);
+  font-style: italic;
+}
+.brand__name {
+  font-family: var(--mono); font-weight: 500;
+  letter-spacing: 0.32em; font-size: 11px; color: var(--bone);
+}
+.brand__name em { color: var(--bone-faint); font-style: normal; margin-left: 6px; }
+
+.modes {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 0; justify-self: start;
+}
+.modes__sep {
+  width: 1px; height: 14px; background: var(--rule-2); margin: 0 14px;
+  align-self: center;
+}
+.mode {
+  background: none; border: none; color: var(--bone-dim);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
+  padding: 6px 14px; text-transform: uppercase;
+  position: relative; cursor: pointer;
+  text-decoration: none;
+}
+.mode:hover { color: var(--bone-2); }
+.mode[aria-disabled="true"] {
+  color: var(--bone-faint); opacity: 0.45; cursor: not-allowed;
+  font-style: italic;
+}
+.mode[aria-disabled="true"]:hover { color: var(--bone-faint); }
+.mode.is-active { color: var(--brass-bright); }
+.mode.is-active::after {
+  content: "";
+  position: absolute; bottom: -1px; left: 14px; right: 14px;
+  height: 2px; background: var(--brass);
+}
+.mode__num {
+  display: inline-block; opacity: 0.55; margin-right: 8px; font-size: 9.5px;
+  color: var(--bone-faint);
+}
+.mode.is-active .mode__num { color: var(--brass-deep); opacity: 1; }
+
+.project {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 14px; border-left: 1px solid var(--rule);
+  position: relative;
+}
+.project-switcher {
+  background: none; border: 1px solid var(--rule-2); color: var(--bone);
+  padding: 6px 12px; cursor: pointer; min-width: 220px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  text-transform: uppercase; text-align: left;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.project-switcher:hover { border-color: var(--brass-deep); color: var(--brass-bright); }
+.project-switcher__caret { color: var(--bone-faint); font-size: 9px; }
+.dropdown {
+  position: absolute; top: calc(100% - 1px); right: 18px;
+  min-width: 240px; max-width: 320px;
+  background: var(--ink-1); border: 1px solid var(--rule-2);
+  display: flex; flex-direction: column;
+  z-index: 20;
+}
+.dropdown[hidden] { display: none; }
+.dropdown__item {
+  background: none; border: none; color: var(--bone-dim);
+  text-align: left; padding: 9px 14px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; border-bottom: 1px solid var(--rule);
+}
+.dropdown__item:hover { background: var(--ink-2); color: var(--bone); }
+.dropdown__item.is-active { color: var(--brass-bright); }
+.dropdown__item:last-child { border-bottom: none; }
+.dropdown__item--new {
+  color: var(--brass-bright);
+  border-top: 1px solid var(--rule-2);
+  font-weight: 500;
+}
+.online {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.online .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--bone-faint); display: inline-block;
+}
+.online.is-online .dot { background: var(--leaf); }
+.online.is-error  .dot { background: var(--blood); }
+
+main.canvas {
+  display: grid;
+  grid-template-columns: 1fr var(--rail-r);
+  height: calc(100vh - var(--top) - var(--bot));
+}
+
+/* Left pane: hero card with bounds visualization. Setup mode is "before
+   styling" — the canvas-stage preview matters less here than understanding
+   where on Earth your map lives. */
+.canvas-section {
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(184, 138, 60, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(184, 138, 60, 0.03) 0%, transparent 60%),
+    var(--ink);
+  overflow: auto;
+  padding: 48px;
+}
+
+/* Bounds visualization — a stylized "atlas plate" with cardinal labels */
+.atlas-card {
+  width: 100%; max-width: 540px;
+  background: var(--ink-1);
+  border: 1px solid var(--rule-2);
+  position: relative;
+  padding: 56px 42px 42px;
+  box-shadow: 0 22px 44px -16px rgba(0,0,0,0.7);
+}
+.atlas-card::before, .atlas-card::after {
+  content: "";
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 1px solid var(--brass-deep);
+}
+.atlas-card::before {
+  top: -1px; left: -1px;
+  border-right: 0; border-bottom: 0;
+}
+.atlas-card::after {
+  top: -1px; right: -1px;
+  border-left: 0; border-bottom: 0;
+}
+.atlas-card__corner {
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 1px solid var(--brass-deep);
+}
+.atlas-card__corner--bl { bottom: -1px; left: -1px;  border-top: 0; border-right: 0; }
+.atlas-card__corner--br { bottom: -1px; right: -1px; border-top: 0; border-left: 0; }
+
+.atlas-eyebrow {
+  position: absolute;
+  top: 14px; left: 0; right: 0;
+  text-align: center;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.5em; text-transform: uppercase;
+  color: var(--brass-deep);
+}
+
+/* Compass-style bounds layout — N at top, S at bottom, W left, E right */
+.bounds-display {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  margin: 0 0 24px;
+}
+.bounds-display .b-n { grid-column: 2; text-align: center; }
+.bounds-display .b-w { grid-row: 2; text-align: right; }
+.bounds-display .b-c { grid-row: 2; grid-column: 2; }
+.bounds-display .b-e { grid-row: 2; grid-column: 3; text-align: left; }
+.bounds-display .b-s { grid-row: 3; grid-column: 2; text-align: center; }
+
+.coord {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 14px; color: var(--bone);
+}
+.coord__cardinal {
+  display: block;
+  font-size: 10px; letter-spacing: 0.4em;
+  color: var(--bone-faint);
+  margin-bottom: 4px;
+}
+
+/* The center panel of the bounds compass shows aspect + a stylized rectangle */
+.bounds-rect-host {
+  border: 1px solid var(--rule-2);
+  background: var(--ink-2);
+  display: grid; place-items: center;
+  height: 180px;
+  position: relative;
+}
+.bounds-rect {
+  border: 1px solid var(--brass);
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(184, 138, 60, 0.05) 0px, rgba(184, 138, 60, 0.05) 4px,
+      transparent 4px, transparent 8px);
+  box-shadow: 0 0 0 4px rgba(184, 138, 60, 0.08);
+}
+.bounds-rect-aspect {
+  position: absolute;
+  bottom: 6px; right: 8px;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.32em; color: var(--bone-faint);
+  text-transform: uppercase;
+}
+
+.atlas-title {
+  font-family: var(--serif); font-size: 32px; line-height: 1.1;
+  font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  color: var(--bone);
+  margin: 0 0 6px;
+  text-align: center;
+}
+.atlas-subtitle {
+  font-family: var(--serif); font-style: italic;
+  font-size: 14px; color: var(--bone-2);
+  font-variation-settings: "SOFT" 50;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.atlas-stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px;
+  padding: 14px 0 0; border-top: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 11px;
+}
+.atlas-stat-grid dt {
+  color: var(--bone-faint);
+  letter-spacing: 0.22em; text-transform: uppercase;
+  font-size: 9.5px;
+}
+.atlas-stat-grid dd {
+  margin: 0; color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+.atlas-stat-grid dd.is-empty { color: var(--bone-faint); font-style: italic; }
+
+/* Inspector */
+.inspector {
+  border-left: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+.inspector__head {
+  padding: 18px 22px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.inspector__eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 8px;
+}
+.inspector__title {
+  font-family: var(--serif);
+  font-size: 30px; line-height: 1; letter-spacing: -0.005em;
+  font-weight: 400;
+  font-variation-settings: "opsz" 96, "SOFT" 25, "WONK" 1;
+  color: var(--bone); margin: 0 0 6px;
+}
+.inspector__sub {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px; color: var(--bone-dim);
+  font-variation-settings: "SOFT" 50;
+}
+.inspector__body { overflow-y: auto; flex: 1; }
+
+fieldset.section {
+  border: 0; padding: 18px 22px 14px; margin: 0;
+  border-bottom: 1px solid var(--rule);
+}
+fieldset.section legend {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-dim);
+  margin-bottom: 14px; padding: 0;
+  width: 100%; display: flex; align-items: center;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: center; gap: 12px;
+  padding: 6px 0;
+}
+.row__label {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+
+input[type="text"], input[type="number"], select {
+  background: var(--ink-2);
+  border: 1px solid var(--rule-2);
+  color: var(--bone);
+  padding: 7px 10px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  width: 100%;
+}
+input[type="text"]:focus, input[type="number"]:focus, select:focus {
+  outline: none; border-color: var(--brass-deep);
+}
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+select {
+  -webkit-appearance: none; appearance: none;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><polygon points='0,0 10,0 5,6' fill='%238b8270'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* Compass-style bounds editor — N at top, S at bottom, W left, E right */
+.bounds-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 10px;
+}
+.bounds-cell {
+  display: flex; align-items: center; gap: 8px;
+}
+.bounds-cell label {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--brass-deep);
+  min-width: 14px;
+}
+.bounds-cell--center {
+  display: grid; place-items: center;
+  border: 1px dashed var(--rule-2);
+  background: var(--ink-2);
+  font-family: var(--serif); font-style: italic;
+  font-size: 11px; color: var(--bone-faint);
+  font-variation-settings: "SOFT" 50;
+}
+.bounds-cell--empty { visibility: hidden; }
+
+.stat-grid {
+  display: grid; gap: 6px 14px;
+  grid-template-columns: auto 1fr;
+  font-family: var(--mono); font-size: 11px;
+  align-items: baseline;
+}
+.stat-grid dt {
+  color: var(--bone-faint);
+  letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 9.5px;
+}
+.stat-grid dd {
+  margin: 0; color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+.stat-grid dd.is-empty { color: var(--bone-faint); font-style: italic; }
+
+.inspector__foot {
+  padding: 14px 22px;
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.btn {
+  background: var(--brass);
+  color: var(--ink);
+  border: 1px solid var(--brass-deep);
+  padding: 9px 16px; cursor: pointer;
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  font-weight: 500;
+}
+.btn:hover { background: var(--brass-bright); }
+.btn--ghost {
+  background: transparent;
+  color: var(--bone-2);
+  border: 1px solid var(--rule-2);
+}
+.btn--ghost:hover { color: var(--bone); border-color: var(--bone-faint); }
+
+.statusbar {
+  height: var(--bot);
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0 18px;
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--bone-faint);
+  gap: 24px;
+}
+.statusbar b { color: var(--bone-2); font-weight: 500; }
+.statusbar .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brass); display: inline-block; margin-right: 8px;
+}
+
+/* New-project modal */
+.modal {
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  z-index: 100;
+  background: rgba(19, 16, 11, 0.85);
+}
+.modal[hidden] { display: none; }
+.modal__card {
+  background: var(--ink-1);
+  border: 1px solid var(--rule-2);
+  padding: 32px 36px;
+  width: 460px; max-width: calc(100vw - 40px);
+  position: relative;
+  box-shadow: 0 32px 64px -22px rgba(0,0,0,0.85);
+}
+.modal__title {
+  font-family: var(--serif); font-size: 28px; font-weight: 400;
+  font-variation-settings: "opsz" 96, "SOFT" 25;
+  margin: 0 0 6px; color: var(--bone);
+}
+.modal__sub {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px; color: var(--bone-dim);
+  margin-bottom: 22px;
+  font-variation-settings: "SOFT" 50;
+}
+.modal__field {
+  display: grid; gap: 6px; margin-bottom: 14px;
+}
+.modal__field label {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.modal__hint {
+  font-family: var(--serif); font-style: italic;
+  font-size: 12px; color: var(--bone-dim);
+  font-variation-settings: "SOFT" 50;
+}
+.modal__hint code {
+  font-family: var(--mono); color: var(--bone-2);
+  font-style: normal;
+}
+.modal__foot {
+  display: flex; gap: 10px; justify-content: flex-end;
+  margin-top: 18px;
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark">C</span>
+    <span class="brand__name">CARTOGRAPH <em>DRAFT</em></span>
+  </div>
+
+  <nav class="modes" id="modesNav">
+    <a class="mode is-active" data-route="/setup"><span class="mode__num">01</span>Setup</a>
+    <a class="mode" data-route="/paint"><span class="mode__num">02</span>Terrain</a>
+    <a class="mode" data-route="/place"><span class="mode__num">03</span>Places</a>
+    <a class="mode" data-route="/routes"><span class="mode__num">04</span>Routes</a>
+    <a class="mode" data-route="/narrative"><span class="mode__num">05</span>Narrative</a>
+    <a class="mode" data-route="/decoration"><span class="mode__num">06</span>Decoration</a>
+    <span class="modes__sep"></span>
+    <a class="mode" data-route="/render"><span class="mode__num">07</span>Render</a>
+  </nav>
+
+  <div class="project">
+    <button class="project-switcher" id="projectSwitcher" aria-haspopup="true" aria-expanded="false">
+      <span id="projectName">jersea-wastes</span>
+      <span class="project-switcher__caret">▼</span>
+    </button>
+    <div class="dropdown" id="projectDropdown" hidden></div>
+    <span class="online" id="onlineIndicator"><span class="dot"></span><span id="onlineLabel">offline</span></span>
+  </div>
+</header>
+
+<main class="canvas">
+  <!-- LEFT: stylized atlas card showing project identity + bounds -->
+  <section class="canvas-section">
+    <div class="atlas-card">
+      <span class="atlas-card__corner atlas-card__corner--bl"></span>
+      <span class="atlas-card__corner atlas-card__corner--br"></span>
+      <div class="atlas-eyebrow" id="atlasEyebrow">project · setup</div>
+
+      <h2 class="atlas-title" id="atlasTitle">—</h2>
+      <p class="atlas-subtitle" id="atlasSubtitle">no subtitle</p>
+
+      <!-- Compass-style bounds display: N top, S bottom, W left, E right,
+           with a small rectangle in the middle showing aspect ratio. -->
+      <div class="bounds-display">
+        <div class="b-n">
+          <div class="coord__cardinal">N</div>
+          <span class="coord" id="atlasN">—</span>
+        </div>
+        <div class="b-w">
+          <div class="coord__cardinal">W</div>
+          <span class="coord" id="atlasW">—</span>
+        </div>
+        <div class="b-c bounds-rect-host">
+          <div class="bounds-rect" id="atlasRect" style="width: 60px; height: 80px;"></div>
+          <span class="bounds-rect-aspect" id="atlasAspect">3:4</span>
+        </div>
+        <div class="b-e">
+          <div class="coord__cardinal">E</div>
+          <span class="coord" id="atlasE">—</span>
+        </div>
+        <div class="b-s">
+          <div class="coord__cardinal">S</div>
+          <span class="coord" id="atlasS">—</span>
+        </div>
+      </div>
+
+      <dl class="atlas-stat-grid">
+        <dt>Lat span</dt><dd id="atlasLatSpan">—</dd>
+        <dt>Lon span</dt><dd id="atlasLonSpan">—</dd>
+        <dt>Sea level</dt><dd id="atlasSea">—</dd>
+        <dt>Render</dt><dd id="atlasRendered" class="is-empty">not rendered yet</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- RIGHT: Setup inspector -->
+  <aside class="inspector">
+    <header class="inspector__head">
+      <div class="inspector__eyebrow">Setup · Project</div>
+      <h2 class="inspector__title">Frame the map</h2>
+      <p class="inspector__sub">Identity, geographic bounds, sea level. The starting point.</p>
+    </header>
+
+    <div class="inspector__body">
+
+      <fieldset class="section">
+        <legend>Identity
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">title text</span>
+        </legend>
+        <div class="row">
+          <span class="row__label">Slug</span>
+          <span style="font-family: var(--mono); color: var(--bone-2); font-size: 11px;" id="fSlug">—</span>
+        </div>
+        <div style="margin: 6px 0 14px; padding-left: 92px; font-family: var(--serif); font-style: italic; font-size: 11.5px; color: var(--bone-faint); font-variation-settings:'SOFT' 50;">
+          Filename, fixed once the project is created.
+        </div>
+        <div class="row">
+          <span class="row__label">Name</span>
+          <input type="text" id="fName" placeholder="e.g. The JerSea Wastes" />
+        </div>
+        <div class="row">
+          <span class="row__label">Subtitle</span>
+          <input type="text" id="fSubtitle" placeholder="optional" />
+        </div>
+        <div class="row">
+          <span class="row__label">Credit</span>
+          <input type="text" id="fCredit" placeholder="optional in-world attribution" />
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Geographic bounds
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">degrees</span>
+        </legend>
+        <div class="bounds-grid">
+          <div class="bounds-cell--empty"></div>
+          <div class="bounds-cell"><label>N</label><input type="number" step="0.001" id="fLatN" /></div>
+          <div class="bounds-cell--empty"></div>
+
+          <div class="bounds-cell"><label>W</label><input type="number" step="0.001" id="fLonW" /></div>
+          <div class="bounds-cell--center">map area</div>
+          <div class="bounds-cell"><label>E</label><input type="number" step="0.001" id="fLonE" /></div>
+
+          <div class="bounds-cell--empty"></div>
+          <div class="bounds-cell"><label>S</label><input type="number" step="0.001" id="fLatS" /></div>
+          <div class="bounds-cell--empty"></div>
+        </div>
+
+        <div class="row" style="margin-top: 14px;">
+          <span class="row__label">Aspect</span>
+          <select id="fAspect">
+            <option value="3:4">3:4 (portrait)</option>
+            <option value="4:3">4:3 (landscape)</option>
+            <option value="1:1">1:1 (square)</option>
+            <option value="2:3">2:3 (portrait)</option>
+            <option value="3:2">3:2 (landscape)</option>
+            <option value="16:9">16:9 (wide)</option>
+            <option value="">free (no crop)</option>
+          </select>
+        </div>
+        <div style="margin: 8px 0 0; font-family: var(--serif); font-style: italic; font-size: 11.5px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          The renderer post-crops your rectangle to fit the aspect ratio. Effective bounds shown on the atlas card to the left.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Sea level
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">m rise</span>
+        </legend>
+        <div class="row">
+          <span class="row__label">Rise</span>
+          <input type="number" step="1" min="0" max="200" id="fSeaLevel" />
+        </div>
+        <div style="margin: 6px 0 0; font-family: var(--serif); font-style: italic; font-size: 11.5px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Floods land below this elevation. Mirrors the slider in Terrain mode — both edit the same field.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Color palette
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">cfg.colors</span>
+        </legend>
+        <div id="colorPaletteList" style="display: grid; gap: 8px;">
+          <!-- rows generated by renderColorPalette() -->
+        </div>
+        <button class="btn btn--ghost" id="btnAddColor" type="button"
+                style="margin-top: 10px; padding: 8px 12px; font-size: 11px;">+ Add color</button>
+        <div style="margin-top: 6px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Named colors referenced by settlements, regions, edge indicators, and the legend. Shadow + water are common; add custom names like <code>bright</code> or <code>district</code> for project-specific palettes.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Fonts
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">cfg.fonts</span>
+        </legend>
+        <div id="fontsList" style="display: grid; gap: 8px;">
+          <!-- rows generated by renderFonts() -->
+        </div>
+        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <input type="text" id="fNewFontRole" placeholder="role name (e.g. major)"
+                 style="flex: 1; min-width: 140px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+          <button class="btn btn--ghost" id="btnAddFont" type="button"
+                  style="padding: 8px 12px; font-size: 11px;">+ Add role</button>
+        </div>
+        <div style="margin-top: 6px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Per-role font definitions. The pipeline ships with sensible defaults for built-in roles (<code>major</code>, <code>minor</code>, <code>region</code>, <code>settle</code>, <code>compass</code>, <code>scale</code>, etc.). Custom roles like <code>bold_13</code> get referenced from barrier labels.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Status</legend>
+        <dl class="stat-grid">
+          <dt>State</dt>     <dd id="statRendered" class="is-empty">not rendered yet</dd>
+          <dt>Effective</dt> <dd id="statEffective" class="is-empty">—</dd>
+          <dt>Canvas</dt>    <dd id="statCanvas" class="is-empty">—</dd>
+          <dt>Settle.</dt>   <dd id="statSettlements" class="is-empty">—</dd>
+          <dt>Regions</dt>   <dd id="statRegions" class="is-empty">—</dd>
+        </dl>
+      </fieldset>
+
+    </div>
+
+    <footer class="inspector__foot">
+      <button class="btn btn--ghost" id="btnSetupRevert">Revert</button>
+      <button class="btn" id="btnSetupCommit">Commit to YAML</button>
+    </footer>
+  </aside>
+</main>
+
+<footer class="statusbar">
+  <div>
+    <span class="dot"></span>
+    <span id="renderState">Ready</span>
+  </div>
+  <div></div>
+  <div>
+    <span>config / <b id="statusConfig">jersea-wastes.yaml</b></span>
+  </div>
+</footer>
+
+<!-- New-project modal — slug + optional title, seed from _template.yaml -->
+<div class="modal" id="newModal" hidden>
+  <div class="modal__card">
+    <span class="atlas-card__corner atlas-card__corner--bl"></span>
+    <span class="atlas-card__corner atlas-card__corner--br"></span>
+    <div class="atlas-eyebrow">project · new</div>
+    <h2 class="modal__title">Spin up a new map</h2>
+    <p class="modal__sub">Seeded from <code style="font-family: var(--mono); font-style: normal; color: var(--bone-2);">_template.yaml</code>. You can edit everything else after.</p>
+
+    <div class="modal__field">
+      <label>Slug</label>
+      <input type="text" id="newSlug" placeholder="lowercase-with-dashes" autocomplete="off" />
+      <span class="modal__hint">Becomes the YAML filename and URL: <code id="newSlugPreview">config/<slug>.yaml</code></span>
+    </div>
+
+    <div class="modal__field">
+      <label>Title (optional)</label>
+      <input type="text" id="newTitle" placeholder="e.g. The Great Northern Reach" />
+    </div>
+
+    <div class="modal__foot">
+      <button class="btn btn--ghost" id="newCancel">Cancel</button>
+      <button class="btn" id="newCreate">Create &amp; open</button>
+    </div>
+  </div>
+</div>
+
+<div class="grain"></div>
+
+<script src="/_shared.js"></script>
+<script>
+// -----------------------------------------------------------------------------
+// Setup mode prototype.
+// Edits:
+//   - top-level: name, subtitle, credit
+//   - bounds: lat_n, lat_s, lon_w, lon_e, aspect_ratio
+//   - terrain.sea_level_rise (also exposed in Terrain mode)
+// Plus:
+//   - new-project flow (clones _template.yaml under a user-chosen slug)
+//   - status panel: rendered? canvas dims? settlement / region counts?
+// -----------------------------------------------------------------------------
+
+let CONFIG_NAME = (new URLSearchParams(location.search).get('project')) || 'jersea-wastes';
+let PROJECT_CONFIG = null;
+let CONFIG_LIST = [];
+let RENDER_INFO = null;     // /api/render-info response — null until rendered
+let ONLINE = false;
+
+// Color palette state — kept as an ORDERED array so re-render is stable
+// (a plain {} would shuffle keys after add/delete on some engines).
+// Each entry: {id, name, color: [r,g,b]}.
+let COLOR_PALETTE = [];
+let nextColorId = 1;
+
+// Font definitions — same array shape for stability.
+// Each entry: {id, role, file, size}.
+let FONTS = [];
+let nextFontId = 1;
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtSignedLat(n) {
+  return n == null ? '—' : `${(n).toFixed(3)}°${n >= 0 ? 'N' : 'S'}`.replace('-','');
+}
+function fmtSignedLon(n) {
+  return n == null ? '—' : `${(n).toFixed(3)}°${n >= 0 ? 'E' : 'W'}`.replace('-','');
+}
+
+// -----------------------------------------------------------------------------
+// YAML ⇄ UI
+// -----------------------------------------------------------------------------
+
+function hydrateFromConfig(cfg) {
+  PROJECT_CONFIG = cfg;
+  document.getElementById('fSlug').textContent     = CONFIG_NAME;
+  document.getElementById('projectName').textContent = CONFIG_NAME;
+  document.getElementById('statusConfig').textContent = `${CONFIG_NAME}.yaml`;
+
+  document.getElementById('fName').value     = cfg.name     || '';
+  document.getElementById('fSubtitle').value = cfg.subtitle || '';
+  document.getElementById('fCredit').value   = cfg.credit   || '';
+
+  const b = cfg.bounds || {};
+  document.getElementById('fLatN').value = b.lat_n ?? '';
+  document.getElementById('fLatS').value = b.lat_s ?? '';
+  document.getElementById('fLonW').value = b.lon_w ?? '';
+  document.getElementById('fLonE').value = b.lon_e ?? '';
+  // Pick the closest matching <option>; defaults to "free" if YAML has a
+  // value the dropdown doesn't list.
+  const fA = document.getElementById('fAspect');
+  const wantedAspect = b.aspect_ratio || '';
+  fA.value = '';   // reset
+  for (const opt of fA.options) {
+    if (opt.value === wantedAspect) { fA.value = wantedAspect; break; }
+  }
+
+  const sl = (cfg.terrain && cfg.terrain.sea_level_rise) ?? 0;
+  document.getElementById('fSeaLevel').value = sl;
+
+  // Color palette — preserve insertion order from the YAML so the user
+  // sees the same row order they get when they hand-edit the file.
+  COLOR_PALETTE = [];
+  nextColorId = 1;
+  for (const [name, rgb] of Object.entries(cfg.colors || {})) {
+    if (!Array.isArray(rgb) || rgb.length < 3) continue;
+    COLOR_PALETTE.push({
+      id: `c${nextColorId++}`,
+      name: String(name),
+      color: [
+        Math.max(0, Math.min(255, Math.round(Number(rgb[0]) || 0))),
+        Math.max(0, Math.min(255, Math.round(Number(rgb[1]) || 0))),
+        Math.max(0, Math.min(255, Math.round(Number(rgb[2]) || 0))),
+      ],
+    });
+  }
+  renderColorPalette();
+
+  // Fonts — built-in role names + any custom ones from the YAML.
+  FONTS = [];
+  nextFontId = 1;
+  for (const [role, def] of Object.entries(cfg.fonts || {})) {
+    if (!def || typeof def !== 'object') continue;
+    FONTS.push({
+      id: `f${nextFontId++}`,
+      role: String(role),
+      file: String(def.file || ''),
+      size: Number(def.size || 0),
+    });
+  }
+  renderFonts();
+
+  renderAtlasCard();
+}
+
+function readSetupFromControls() {
+  const prev = PROJECT_CONFIG || {};
+  const prevTerrain = prev.terrain || {};
+
+  const num = (id) => {
+    const v = Number(document.getElementById(id).value);
+    return Number.isFinite(v) ? v : null;
+  };
+
+  const out = {
+    ...prev,
+    name:     document.getElementById('fName').value.trim()     || prev.name || '',
+    bounds: {
+      ...(prev.bounds || {}),
+      lat_n: num('fLatN'),
+      lat_s: num('fLatS'),
+      lon_w: num('fLonW'),
+      lon_e: num('fLonE'),
+      aspect_ratio: document.getElementById('fAspect').value || null,
+    },
+    terrain: {
+      ...prevTerrain,
+      sea_level_rise: num('fSeaLevel') ?? 0,
+    },
+  };
+
+  // Optional fields: only emit when non-empty so we don't litter YAML with
+  // empty subtitle/credit lines.
+  const sub = document.getElementById('fSubtitle').value.trim();
+  const cred = document.getElementById('fCredit').value.trim();
+  if (sub)   out.subtitle = sub; else delete out.subtitle;
+  if (cred)  out.credit   = cred; else delete out.credit;
+
+  // aspect_ratio: null means "free" — drop the key entirely so the renderer
+  // doesn't crash trying to parse "null".
+  if (out.bounds.aspect_ratio == null) delete out.bounds.aspect_ratio;
+
+  // Color palette — assemble dict from ordered array. Skip blank-named
+  // rows (the user is mid-typing a new color).
+  const colors = {};
+  for (const c of COLOR_PALETTE) {
+    const name = String(c.name || '').trim();
+    if (!name) continue;
+    colors[name] = [
+      Math.max(0, Math.min(255, Math.round(c.color[0] || 0))),
+      Math.max(0, Math.min(255, Math.round(c.color[1] || 0))),
+      Math.max(0, Math.min(255, Math.round(c.color[2] || 0))),
+    ];
+  }
+  if (Object.keys(colors).length > 0) out.colors = colors;
+  else delete out.colors;
+
+  // Fonts — same dict-from-array pattern. Skip rows with blank role or
+  // missing file/size; an incomplete row would crash the loader.
+  const fonts = {};
+  for (const f of FONTS) {
+    const role = String(f.role || '').trim();
+    if (!role || !f.file || !f.size) continue;
+    fonts[role] = { file: String(f.file), size: Math.max(8, Math.round(Number(f.size) || 0)) };
+  }
+  if (Object.keys(fonts).length > 0) out.fonts = fonts;
+  else delete out.fonts;
+
+  return out;
+}
+
+// -----------------------------------------------------------------------------
+// Color palette + Fonts (cfg.colors + cfg.fonts)
+// -----------------------------------------------------------------------------
+
+function rgbCSS(rgb) {
+  return `rgb(${rgb[0] | 0}, ${rgb[1] | 0}, ${rgb[2] | 0})`;
+}
+
+function renderColorPalette() {
+  const host = document.getElementById('colorPaletteList');
+  if (!host) return;
+  host.innerHTML = '';
+  if (COLOR_PALETTE.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding: 6px 0; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--bone-dim); font-variation-settings:\'SOFT\' 50;';
+    empty.textContent = 'No named colors. Add one to use in legend, settlements, regions.';
+    host.appendChild(empty);
+    return;
+  }
+  for (const c of COLOR_PALETTE) host.appendChild(buildColorRow(c));
+}
+
+function buildColorRow(c) {
+  const row = document.createElement('div');
+  row.dataset.id = c.id;
+  row.style.cssText = 'display: grid; grid-template-columns: 22px 1fr 36px 36px 36px 22px; gap: 6px; align-items: center; padding: 6px 8px; background: var(--ink-2); border: 1px solid var(--rule-2);';
+  row.innerHTML = `
+    <span style="display: inline-block; width: 18px; height: 18px; border: 1px solid var(--rule-2); background: ${rgbCSS(c.color)};" data-role="swatch"></span>
+    <input type="text" data-field="name" value="${escapeHtml(c.name)}"
+           style="background: var(--ink-3); color: var(--bone); border: 1px solid var(--rule-2); padding: 4px 6px; font: inherit; font-size: 11px;">
+    <input type="number" data-field="r" min="0" max="255" step="1" value="${c.color[0]}"
+           style="background: var(--ink-3); color: var(--bone); border: 1px solid var(--rule-2); padding: 4px 4px; font: inherit; font-size: 11px; text-align: center;">
+    <input type="number" data-field="g" min="0" max="255" step="1" value="${c.color[1]}"
+           style="background: var(--ink-3); color: var(--bone); border: 1px solid var(--rule-2); padding: 4px 4px; font: inherit; font-size: 11px; text-align: center;">
+    <input type="number" data-field="b" min="0" max="255" step="1" value="${c.color[2]}"
+           style="background: var(--ink-3); color: var(--bone); border: 1px solid var(--rule-2); padding: 4px 4px; font: inherit; font-size: 11px; text-align: center;">
+    <button type="button" data-action="delete" title="Delete"
+            style="background: transparent; color: var(--bone-dim); border: 1px solid var(--rule-2); cursor: pointer; padding: 2px 0; font: inherit; font-size: 14px;">×</button>
+  `;
+  // Wire inputs locally so the row owns its own change handling.
+  row.addEventListener('input', (ev) => {
+    const field = ev.target?.dataset?.field;
+    if (!field) return;
+    if (field === 'name') c.name = ev.target.value;
+    else {
+      const v = Math.max(0, Math.min(255, Math.round(Number(ev.target.value) || 0)));
+      c.color['rgb'.indexOf(field)] = v;
+      row.querySelector('[data-role="swatch"]').style.background = rgbCSS(c.color);
+    }
+  });
+  row.addEventListener('click', (ev) => {
+    if (ev.target?.dataset?.action !== 'delete') return;
+    const i = COLOR_PALETTE.findIndex(x => x.id === c.id);
+    if (i >= 0) COLOR_PALETTE.splice(i, 1);
+    renderColorPalette();
+  });
+  return row;
+}
+
+function renderFonts() {
+  const host = document.getElementById('fontsList');
+  if (!host) return;
+  host.innerHTML = '';
+  if (FONTS.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding: 6px 0; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--bone-dim); font-variation-settings:\'SOFT\' 50;';
+    empty.textContent = 'No font overrides. Pipeline uses built-in defaults for all roles.';
+    host.appendChild(empty);
+    return;
+  }
+  for (const f of FONTS) host.appendChild(buildFontRow(f));
+}
+
+function buildFontRow(f) {
+  const row = document.createElement('div');
+  row.dataset.id = f.id;
+  row.style.cssText = 'display: grid; grid-template-columns: 90px 1fr 70px 22px; gap: 6px; align-items: center; padding: 6px 8px; background: var(--ink-2); border: 1px solid var(--rule-2);';
+  row.innerHTML = `
+    <input type="text" data-field="role" value="${escapeHtml(f.role)}" placeholder="role"
+           style="background: var(--ink-3); color: var(--brass-bright); border: 1px solid var(--rule-2); padding: 4px 6px; font: inherit; font-size: 11px; letter-spacing: 0.04em;">
+    <input type="text" data-field="file" value="${escapeHtml(f.file)}" placeholder="DejaVuSerif.ttf"
+           style="background: var(--ink-3); color: var(--bone); border: 1px solid var(--rule-2); padding: 4px 6px; font: inherit; font-size: 11px;">
+    <input type="number" data-field="size" min="8" max="120" step="1" value="${f.size}"
+           style="background: var(--ink-3); color: var(--bone); border: 1px solid var(--rule-2); padding: 4px 4px; font: inherit; font-size: 11px; text-align: center;">
+    <button type="button" data-action="delete" title="Delete"
+            style="background: transparent; color: var(--bone-dim); border: 1px solid var(--rule-2); cursor: pointer; padding: 2px 0; font: inherit; font-size: 14px;">×</button>
+  `;
+  row.addEventListener('input', (ev) => {
+    const field = ev.target?.dataset?.field;
+    if (!field) return;
+    if (field === 'size') f.size = Math.max(8, Math.round(Number(ev.target.value) || 0));
+    else f[field] = String(ev.target.value);
+  });
+  row.addEventListener('click', (ev) => {
+    if (ev.target?.dataset?.action !== 'delete') return;
+    const i = FONTS.findIndex(x => x.id === f.id);
+    if (i >= 0) FONTS.splice(i, 1);
+    renderFonts();
+  });
+  return row;
+}
+
+// -----------------------------------------------------------------------------
+// Atlas card (left side)
+// -----------------------------------------------------------------------------
+
+function renderAtlasCard() {
+  const cfg = PROJECT_CONFIG || {};
+  const b = cfg.bounds || {};
+
+  document.getElementById('atlasTitle').textContent    = cfg.name || CONFIG_NAME;
+  const sub = document.getElementById('atlasSubtitle');
+  sub.textContent = cfg.subtitle || 'no subtitle';
+  sub.style.opacity = cfg.subtitle ? '1' : '0.5';
+
+  document.getElementById('atlasN').textContent = fmtSignedLat(b.lat_n);
+  document.getElementById('atlasS').textContent = fmtSignedLat(b.lat_s);
+  document.getElementById('atlasW').textContent = fmtSignedLon(b.lon_w);
+  document.getElementById('atlasE').textContent = fmtSignedLon(b.lon_e);
+  document.getElementById('atlasAspect').textContent = b.aspect_ratio || 'free';
+
+  // Aspect-shaped rectangle inside the bounds-rect-host.
+  const rect = document.getElementById('atlasRect');
+  let aw = 60, ah = 80;
+  if (b.aspect_ratio) {
+    const m = String(b.aspect_ratio).match(/^(\d+)\s*:\s*(\d+)$/);
+    if (m) {
+      const ratio = Number(m[1]) / Number(m[2]);   // W/H
+      // Fit within 100×120 envelope while preserving ratio
+      if (ratio >= 1) { aw = 100; ah = Math.round(100 / ratio); }
+      else            { ah = 120; aw = Math.round(120 * ratio); }
+    }
+  }
+  rect.style.width  = `${aw}px`;
+  rect.style.height = `${ah}px`;
+
+  // Stat panel at the bottom of the atlas card
+  const latSpan = (b.lat_n != null && b.lat_s != null) ? (b.lat_n - b.lat_s) : null;
+  const lonSpan = (b.lon_e != null && b.lon_w != null) ? (b.lon_e - b.lon_w) : null;
+  const setStat = (id, val, empty) => {
+    const el = document.getElementById(id);
+    el.textContent = val == null ? '—' : val;
+    el.classList.toggle('is-empty', !!empty || val == null);
+  };
+  setStat('atlasLatSpan', latSpan != null ? `${latSpan.toFixed(2)}°` : null);
+  setStat('atlasLonSpan', lonSpan != null ? `${lonSpan.toFixed(2)}°` : null);
+  const sl = (cfg.terrain && cfg.terrain.sea_level_rise) ?? 0;
+  setStat('atlasSea', `${sl} m`);
+
+  // Render-status row (uses RENDER_INFO loaded from /api/render-info)
+  const statusEl = document.getElementById('atlasRendered');
+  if (RENDER_INFO) {
+    statusEl.textContent = `${RENDER_INFO.terrain_w}×${RENDER_INFO.terrain_h}`;
+    statusEl.classList.remove('is-empty');
+  } else {
+    statusEl.textContent = 'not rendered yet';
+    statusEl.classList.add('is-empty');
+  }
+
+  renderStatusPanel();
+}
+
+function renderStatusPanel() {
+  const cfg = PROJECT_CONFIG || {};
+  const set = (id, val, empty) => {
+    const el = document.getElementById(id);
+    el.textContent = val == null ? '—' : val;
+    el.classList.toggle('is-empty', !!empty || val == null);
+  };
+
+  if (RENDER_INFO) {
+    set('statRendered',  'rendered', false);
+    set('statEffective', `${RENDER_INFO.terrain_w}×${RENDER_INFO.terrain_h} px`, false);
+    set('statCanvas',    `${RENDER_INFO.canvas_w}×${RENDER_INFO.canvas_h} px (border ${RENDER_INFO.border})`, false);
+  } else {
+    set('statRendered',  'not rendered yet', true);
+    set('statEffective', null, true);
+    set('statCanvas',    null, true);
+  }
+  const settlements = (cfg.settlements || []).length;
+  const regions     = (cfg.regions     || []).length;
+  set('statSettlements', `${settlements} placed`, settlements === 0);
+  set('statRegions',     `${regions} placed`,     regions === 0);
+}
+
+// -----------------------------------------------------------------------------
+// Online + render-state messaging
+// -----------------------------------------------------------------------------
+
+function setOnlineIndicator(state, msg) {
+  const el  = document.getElementById('onlineIndicator');
+  const lbl = document.getElementById('onlineLabel');
+  el.classList.toggle('is-online', state === 'online');
+  el.classList.toggle('is-error',  state === 'error');
+  lbl.textContent = msg || (state === 'online' ? 'online' : (state === 'error' ? 'error' : 'offline'));
+}
+function setRenderState(state, msg) {
+  const el = document.getElementById('renderState');
+  if (!el) return;
+  if (state === 'saving')         el.textContent = 'Saving…';
+  else if (state === 'rendering') el.textContent = 'Rendering…';
+  else if (state === 'ok')        el.textContent = msg || 'Ready';
+  else if (state === 'err')       el.textContent = msg || 'Error';
+  else                            el.textContent = 'Ready';
+}
+
+// -----------------------------------------------------------------------------
+// Commit (save metadata + bounds; render to refresh the cache)
+// -----------------------------------------------------------------------------
+
+async function commitToServer() {
+  if (!ONLINE || !PROJECT_CONFIG) {
+    alert("Backend isn't reachable. Run:\n\n    python3 -m src.server\n\nthen reload this page.");
+    return;
+  }
+  const updated = readSetupFromControls();
+
+  // Bounds change invalidates the entire cache (stage 1 onward), so re-render
+  // is the most expensive commit in the workflow. Warn before doing it if
+  // bounds actually changed.
+  const oldB = (PROJECT_CONFIG.bounds || {});
+  const newB = updated.bounds;
+  const boundsChanged = ['lat_n', 'lat_s', 'lon_w', 'lon_e', 'aspect_ratio']
+    .some(k => String(oldB[k] ?? '') !== String(newB[k] ?? ''));
+
+  if (boundsChanged && !confirm(
+      "You changed the geographic bounds. The next render will rebuild from scratch (SRTM tiles, OSM data, all stages).\n\n" +
+      "This can take 30-60 seconds. Proceed?"
+  )) {
+    return;
+  }
+
+  setRenderState('saving');
+  try {
+    const putR = await fetch(`/api/config/${CONFIG_NAME}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    });
+    if (!putR.ok) throw new Error(`PUT ${putR.status}`);
+
+    setRenderState('rendering');
+    const rR = await fetch(`/api/render/${CONFIG_NAME}`, { method: 'POST' });
+    if (!rR.ok) throw new Error(`render ${rR.status}`);
+    const result = await rR.json();
+
+    PROJECT_CONFIG = updated;
+    await refreshRenderInfo();
+    renderAtlasCard();
+    setRenderState('ok', `rendered in ${(result.total_ms / 1000).toFixed(1)} s`);
+
+    if (window.Cartograph && Cartograph.History) {
+      Cartograph.History.pushSnapshot('commit');
+    }
+  } catch (e) {
+    console.error('[setup] commit failed', e);
+    setRenderState('err', e.message);
+  }
+}
+
+async function refreshRenderInfo() {
+  try {
+    const r = await fetch(`/api/render-info/${CONFIG_NAME}`);
+    if (r.ok) {
+      RENDER_INFO = await r.json();
+    } else {
+      RENDER_INFO = null;
+    }
+  } catch {
+    RENDER_INFO = null;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Project switcher (with "+ create new" entry)
+// -----------------------------------------------------------------------------
+
+function renderConfigList() {
+  const dd = document.getElementById('projectDropdown');
+  dd.innerHTML = '';
+  for (const name of CONFIG_LIST) {
+    const b = document.createElement('button');
+    b.className = 'dropdown__item' + (name === CONFIG_NAME ? ' is-active' : '');
+    b.textContent = name;
+    b.addEventListener('click', () => {
+      const url = new URL(location.href);
+      url.searchParams.set('project', name);
+      location.href = url.toString();
+    });
+    dd.appendChild(b);
+  }
+  // "+ Create new" entry pinned at the bottom
+  const nb = document.createElement('button');
+  nb.className = 'dropdown__item dropdown__item--new';
+  nb.textContent = '+ New project…';
+  nb.addEventListener('click', openNewModal);
+  dd.appendChild(nb);
+}
+
+function openDropdown()   { document.getElementById('projectDropdown').hidden = false; document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'true');  }
+function closeDropdown()  { document.getElementById('projectDropdown').hidden = true;  document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'false'); }
+function toggleDropdown() { document.getElementById('projectDropdown').hidden ? openDropdown() : closeDropdown(); }
+
+// -----------------------------------------------------------------------------
+// New-project modal
+// -----------------------------------------------------------------------------
+
+function openNewModal() {
+  closeDropdown();
+  document.getElementById('newSlug').value  = '';
+  document.getElementById('newTitle').value = '';
+  document.getElementById('newSlugPreview').textContent = 'config/<slug>.yaml';
+  document.getElementById('newModal').hidden = false;
+  setTimeout(() => document.getElementById('newSlug').focus(), 0);
+}
+function closeNewModal() {
+  document.getElementById('newModal').hidden = true;
+}
+
+function slugify(s) {
+  return String(s).trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+}
+
+async function createNewProject() {
+  const slug = slugify(document.getElementById('newSlug').value);
+  if (!slug) { alert('Enter a slug first (lowercase, dashes ok)'); return; }
+  if (slug.startsWith('_') || slug.startsWith('.')) {
+    alert('Slug cannot start with _ or .'); return;
+  }
+  if (CONFIG_LIST.includes(slug)) {
+    if (!confirm(`A project named "${slug}" already exists. Open it?`)) return;
+    const url = new URL(location.href);
+    url.searchParams.set('project', slug);
+    location.href = url.toString();
+    return;
+  }
+
+  // Pull the template, plug in the user's title, PUT to the new slug.
+  setRenderState('saving');
+  try {
+    const tR = await fetch('/api/config/_template');
+    if (!tR.ok) throw new Error(`fetch template ${tR.status}`);
+    const tpl = await tR.json();
+
+    const title = document.getElementById('newTitle').value.trim();
+    if (title) tpl.name = title;
+
+    const putR = await fetch(`/api/config/${slug}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tpl),
+    });
+    if (!putR.ok) throw new Error(`PUT ${putR.status}`);
+
+    // Hop to the new project — Setup will reload with the seeded config.
+    const url = new URL(location.href);
+    url.searchParams.set('project', slug);
+    location.href = url.toString();
+  } catch (e) {
+    console.error('[setup] new project failed', e);
+    setRenderState('err', e.message);
+    alert(`Couldn't create project: ${e.message}`);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Boot
+// -----------------------------------------------------------------------------
+
+async function tryConnectServer() {
+  try {
+    const [listR, cfgR] = await Promise.all([
+      fetch('/api/configs'),
+      fetch(`/api/config/${CONFIG_NAME}`),
+    ]);
+    if (!listR.ok || !cfgR.ok) throw new Error('api unavailable');
+    CONFIG_LIST = await listR.json();
+    const cfg = await cfgR.json();
+    hydrateFromConfig(cfg);
+    await refreshRenderInfo();
+    renderAtlasCard();
+
+    ONLINE = true;
+    setOnlineIndicator('online');
+    renderConfigList();
+
+    // Initialize shared Save + History modules. Setup uses an explicit
+    // commit (manual mode) — undo/redo restores form state by re-hydrating
+    // from the snapshot.
+    if (window.Cartograph) {
+      const buildCfg = () => readSetupFromControls();
+      const applyCfg = (cfg) => {
+        hydrateFromConfig(cfg);
+        renderAtlasCard();
+      };
+      Cartograph.Save.init({
+        project: CONFIG_NAME, getCfg: buildCfg, mode: "manual",
+      });
+      Cartograph.History.init({ getCfg: buildCfg, applyCfg });
+    }
+  } catch (e) {
+    console.log(`[setup] offline: ${e.message}`);
+    ONLINE = false;
+    setOnlineIndicator('error', 'offline');
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Wiring
+// -----------------------------------------------------------------------------
+
+document.getElementById('projectSwitcher').addEventListener('click', toggleDropdown);
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#projectSwitcher') && !ev.target.closest('#projectDropdown')) {
+    closeDropdown();
+  }
+});
+
+// Mode-nav routing — preserves ?project= across mode switches.
+for (const link of document.querySelectorAll('#modesNav a[data-route]')) {
+  const route = link.dataset.route;
+  if (!route || route === '#') {
+    link.addEventListener('click', (ev) => ev.preventDefault());
+    continue;
+  }
+  const url = new URL(route, location.origin);
+  url.searchParams.set('project', CONFIG_NAME);
+  link.href = url.pathname + url.search;
+}
+
+// Live atlas updates — every text/number/select input rebinds renderAtlasCard
+// so the user sees their edits reflected on the left immediately (without
+// committing to YAML yet).
+for (const id of ['fName','fSubtitle','fCredit','fLatN','fLatS','fLonW','fLonE','fAspect','fSeaLevel']) {
+  const el = document.getElementById(id);
+  if (!el) continue;
+  el.addEventListener('input', () => {
+    if (!PROJECT_CONFIG) return;
+    // Mutate the in-memory config so renderAtlasCard reflects the typed value
+    PROJECT_CONFIG = readSetupFromControls();
+    renderAtlasCard();
+  });
+}
+
+// Slug preview in the new-project modal
+document.getElementById('newSlug').addEventListener('input', (ev) => {
+  const s = slugify(ev.target.value);
+  document.getElementById('newSlugPreview').textContent =
+    s ? `config/${s}.yaml` : 'config/<slug>.yaml';
+});
+
+// Color palette + Fonts buttons
+document.getElementById('btnAddColor').addEventListener('click', () => {
+  // Default to mid-grey so the swatch is visible immediately.
+  COLOR_PALETTE.push({
+    id: `c${nextColorId++}`,
+    name: '',
+    color: [180, 170, 150],
+  });
+  renderColorPalette();
+  // Focus the new row's name input so the user can type immediately.
+  const last = document.querySelector('#colorPaletteList > div:last-child input[data-field="name"]');
+  if (last) last.focus();
+});
+document.getElementById('btnAddFont').addEventListener('click', () => {
+  const role = String(document.getElementById('fNewFontRole').value || '').trim();
+  if (!role) {
+    document.getElementById('fNewFontRole').focus();
+    return;
+  }
+  // Default to a generic serif at 14px so the row is valid immediately.
+  FONTS.push({
+    id: `f${nextFontId++}`,
+    role,
+    file: 'DejaVuSerif.ttf',
+    size: 14,
+  });
+  document.getElementById('fNewFontRole').value = '';
+  renderFonts();
+});
+
+// Footer
+document.getElementById('btnSetupCommit').addEventListener('click', commitToServer);
+document.getElementById('btnSetupRevert').addEventListener('click', async () => {
+  // Re-fetch from disk so revert undoes BOTH committed and uncommitted edits
+  try {
+    const r = await fetch(`/api/config/${CONFIG_NAME}`);
+    if (r.ok) hydrateFromConfig(await r.json());
+  } catch {}
+});
+
+// New-project modal buttons
+document.getElementById('newCancel').addEventListener('click', closeNewModal);
+document.getElementById('newCreate').addEventListener('click', createNewProject);
+window.addEventListener('keydown', (ev) => {
+  const modal = document.getElementById('newModal');
+  if (modal.hidden) return;
+  if (ev.key === 'Escape') closeNewModal();
+  if (ev.key === 'Enter' && !(ev.target instanceof HTMLTextAreaElement)) createNewProject();
+});
+
+tryConnectServer();
+</script>
+</body>
+</html>

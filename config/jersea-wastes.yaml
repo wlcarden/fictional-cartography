@@ -1,0 +1,590 @@
+bounds:
+  aspect_ratio: '3:4'
+  lat_n: 41.65
+  lat_s: 38.85
+  lon_e: -73.38
+  lon_w: -76.12
+canvas:
+  border: 100
+  border_lines:
+  - color:
+    - 50
+    - 40
+    - 30
+    offset: 8
+    width: 3
+  - color:
+    - 70
+    - 55
+    - 40
+    offset: 15
+    width: 1
+  - color:
+    - 90
+    - 72
+    - 50
+    offset: 20
+    width: 2
+  paper_color:
+  - 210
+  - 190
+  - 150
+colors:
+  cyan:
+  - 150
+  - 200
+  - 220
+  gold:
+  - 230
+  - 190
+  - 80
+  green:
+  - 130
+  - 200
+  - 110
+  grey:
+  - 175
+  - 170
+  - 160
+  parch:
+  - 200
+  - 190
+  - 170
+  red:
+  - 220
+  - 120
+  - 80
+  shadow:
+  - 30
+  - 25
+  - 18
+  water:
+  - 140
+  - 160
+  - 175
+  white:
+  - 235
+  - 225
+  - 200
+credit: Compiled from Sainthood Survey Records, ~120 DC
+edge_indicators:
+- text: "\u2190 THREE MILE FIRE"
+  lat: 40.15
+  edge: west
+  color: red
+  note: Still burning
+infrastructure:
+- name: Pale Horse Pike
+  lat: 39.55
+  lon: -74.72
+  note: Sole road to Aysea
+legend:
+  entries:
+  - color: gold
+    label: Major Settlement
+    type: circle
+  - color: cyan
+    label: Canon Location
+    type: circle
+  - color: white
+    label: Minor Settlement/Compound
+    type: circle
+  - color: green
+    label: Region
+    type: circle
+  - color:
+    - 170
+    - 145
+    - 100
+    label: Known Road
+    type: line
+  - color: red
+    label: Hazard
+    type: circle
+name: The JerSea Wastes
+reference_cities:
+  cities:
+  - lat: 40.217
+    lon: -74.743
+    name: Trenton
+  - lat: 40.735
+    lon: -74.172
+    name: Newark
+  - lat: 39.926
+    lon: -75.12
+    name: Camden
+  - lat: 39.954
+    lon: -74.198
+    name: Toms River
+  - lat: 40.797
+    lon: -74.481
+    name: Morristown
+  - lat: 40.917
+    lon: -74.172
+    name: Paterson
+  - lat: 40.486
+    lon: -74.451
+    name: New Brunswick
+  - lat: 40.349
+    lon: -74.659
+    name: Princeton
+  - lat: 39.486
+    lon: -75.026
+    name: Vineland
+  - lat: 40.886
+    lon: -74.043
+    name: Hackensack
+  - lat: 41.446
+    lon: -74.422
+    name: Middletown NY
+  - lat: 41.375
+    lon: -74.693
+    name: Port Jervis
+  - lat: 41.654
+    lon: -74.69
+    name: Monticello NY
+  - lat: 40.347
+    lon: -74.064
+    name: Red Bank NJ
+  - lat: 40.096
+    lon: -74.218
+    name: Lakewood
+  - lat: 39.637
+    lon: -74.802
+    name: Hammonton
+  enabled: false
+regions:
+- center:
+  - 39.76
+  - -74.91
+  color:
+  - 130
+  - 200
+  - 110
+  name: THE BARRENS
+  subtitle: The Pine Baron's domain
+  tint:
+    adjustments:
+      b: -0.07
+      g: 0.06
+      r: -0.09
+    center:
+    - 39.70242756783834
+    - -74.6475487837555
+    desaturate: 0
+    inner_radius: 0.07548591838259566
+    outer_radius: 0.518402791108366
+    strength: 1
+  type: region_label
+- center:
+  - 39.35
+  - -74.1
+  color:
+  - 140
+  - 160
+  - 175
+  name: The JerSea
+  subtitle: Drowned coastal plain
+  type: region_label
+- center:
+  - 40.45
+  - -74.45
+  color:
+  - 180
+  - 175
+  - 155
+  name: NJ Highlands
+  tint:
+    adjustments:
+      b: 0.03
+      g: -0.02
+      r: -0.04
+    center:
+    - 41
+    - -74.5
+    desaturate: 0
+    inner_radius: 0.12
+    outer_radius: 0.55
+    strength: 0.6
+  type: region_label
+- center:
+  - 41.35
+  - -73.65
+  color:
+  - 150
+  - 200
+  - 220
+  name: The Mass
+  subtitle: Drowned Baywalker territory
+  type: region_label
+- center:
+  - 40.5
+  - -75.6
+  color:
+  - 170
+  - 160
+  - 145
+  name: Appaloosa
+  subtitle: Expanse
+  type: region_label
+- name: Old York
+  tint:
+    adjustments:
+      b: -0.04
+      g: 0.02
+      r: 0.05
+    center:
+    - 40.75
+    - -73.99
+    desaturate: 0.7
+    inner_radius: 0.04
+    outer_radius: 0.3
+    strength: 0.6
+  type: tint_only
+- name: Old York Crater
+  tint:
+    adjustments:
+      b: -0.04
+      g: -0.02
+      r: 0.03
+    center:
+    - 40.82
+    - -74.1
+    desaturate: 0.85
+    inner_radius: 0
+    outer_radius: 0.12
+    strength: 0.4
+  type: tint_only
+- name: Delphian Wastes
+  tint:
+    adjustments:
+      b: -0.06
+      g: -0.05
+      r: 0.12
+    center:
+    - 39.95
+    - -75.16
+    desaturate: 0.2
+    inner_radius: 0.02
+    outer_radius: 0.22
+    strength: 0.3
+  type: tint_only
+- name: May Cape Radiation
+  tint:
+    adjustments:
+      b: -0.07
+      g: 0.04
+      r: 0.05
+    center:
+    - 38.94
+    - -74.9
+    desaturate: 0.45
+    inner_radius: 0
+    outer_radius: 0.28
+    strength: 0.5
+  type: tint_only
+- name: Three Mile Fire Drift
+  tint:
+    adjustments:
+      b: -0.05
+      g: 0.01
+      r: 0.04
+    desaturate: 0.2
+    direction: southeast
+    range: 1.2
+    source:
+    - 40.15
+    - -76.73
+    strength: 0.25
+    type: directional
+  type: tint_only
+- name: Aysea Glow
+  tint:
+    adjustments:
+      b: -0.03
+      g: 0.05
+      r: 0.06
+    center:
+    - 39.36
+    - -74.42
+    desaturate: 0
+    inner_radius: 0
+    outer_radius: 0.08
+    strength: 1
+  type: tint_only
+- name: Catskills
+  tint:
+    adjustments:
+      b: -0.01
+      g: -0.04
+      r: -0.06
+    center:
+    - 41.5
+    - -74.7
+    desaturate: 0
+    inner_radius: 0.08
+    outer_radius: 0.4
+    strength: 0.6
+  type: tint_only
+roads:
+  mask_by_water: true
+  networks:
+  - US:I
+  - US:US
+  shadow_color:
+  - 45
+  - 38
+  - 28
+  styles:
+    interstate:
+      color:
+      - 170
+      - 145
+      - 100
+      shadow_width: 1
+      width: 3
+    us_highway:
+      color:
+      - 160
+      - 145
+      - 115
+      shadow_width: 1
+      width: 2
+settlements:
+- name: Aysea
+  lat: 39.364
+  lon: -74.423
+  color: cyan
+  radius: 16
+  font: major
+  note: The Big Shitty
+  label_side: below
+- name: Requiem
+  lat: 41.53
+  lon: -74.7
+  color: gold
+  radius: 12
+  note: Forestburg, NY
+  label_side: right
+- name: Old York
+  lat: 40.758
+  lon: -73.986
+  color: cyan
+  radius: 16
+  font: major
+  note: Flooded metropolis
+  label_side: left
+- name: May Cape
+  lat: 38.935
+  lon: -74.906
+  color: cyan
+  radius: 12
+  note: "Radioactive port \u2014 Three Mile Fire"
+  label_side: above
+- name: (Killa)Delphian Wastes
+  lat: 39.953
+  lon: -75.163
+  color: cyan
+  radius: 16
+  font: major
+  note: Philadelphia, PA
+  label_side: left
+- name: Pleasantville
+  lat: 39.39
+  lon: -74.524
+  color: cyan
+  radius: 10
+  note: Former slave farm in the pines
+  label_side: left
+- name: Leeds
+  lat: 39.672
+  lon: -74.348
+  color: gold
+  radius: 12
+  note: "Mother Leeds' estate \u2014 cryptids"
+  label_side: above
+- name: Claimer's Quarry
+  lat: 40.902
+  lon: -74.709
+  color: gold
+  radius: 12
+  note: Stanhope, NJ
+  label_side: below-right
+- name: The Kennel
+  lat: 40.05
+  lon: -74.85
+  color: white
+  radius: 10
+  label_side: right
+- name: Elbee Island
+  lat: 39.5
+  lon: -74.28
+  color: cyan
+  radius: 10
+  note: Sainthood underground railroad
+  label_side: right
+- name: Tappin' Zed Bridge
+  lat: 41.07
+  lon: -73.87
+  color: cyan
+  radius: 10
+  note: Only safe river crossing
+  label_side: left
+- name: Barren's Reach
+  lat: 39.7
+  lon: -75
+  color: gold
+  radius: 12
+  label_side: left
+- name: Edison's Folly
+  lat: 39.618
+  lon: -74.32
+  color: white
+  radius: 8
+  note: Peninsula settlement
+  label_side: right
+- name: Old Ton
+  lat: 40.96
+  lon: -74.7
+  color: white
+  radius: 8
+  label_side: above
+- name: The Eve
+  lat: 40.9632
+  lon: -74.5719
+  color: white
+  radius: 8
+  note: Hopatcong, NJ
+  label_side: right
+- name: Port Barren
+  lat: 40.898
+  lon: -74.741
+  color: white
+  radius: 8
+  label_side: below-left
+- name: Quiet Hills
+  lat: 40.9464
+  lon: -74.7834
+  color: white
+  radius: 8
+  label_side: left
+- name: Green Star Commune
+  lat: 40.612
+  lon: -74.295
+  color: white
+  radius: 10
+  note: Waterfront commune
+  label_side: left
+- name: Devil's Sloop
+  lat: 40.62
+  lon: -74.095
+  color: white
+  radius: 8
+  note: Island stronghold
+  label_side: right
+- name: Hayven
+  lat: 41.035
+  lon: -74.641
+  color: gold
+  radius: 12
+  note: Sparta, NJ
+  label_side: above
+- name: Iron Gardens
+  lat: 40.85
+  lon: -73.92
+  color: cyan
+  radius: 10
+  label_side: right
+- name: Brokelands
+  lat: 40.68
+  lon: -73.95
+  color: cyan
+  radius: 10
+  label_side: right
+state_boundaries:
+  enabled: false
+  highlight: New Jersey
+  highlight_color:
+  - 255
+  - 210
+  - 70
+  - 200
+  other_color:
+  - 170
+  - 170
+  - 190
+  - 70
+  states:
+  - New Jersey
+  - New York
+  - Pennsylvania
+  - Delaware
+  - Maryland
+  - Connecticut
+subtitle: And Surrounding Territories
+terrain:
+  coastline_darken:
+    dilation: 3
+    factor: 0.7
+  downsample: 4
+  noise:
+    drift_sigma: 60
+    drift_strength: 0.06
+    scorch_sigma: 25
+    scorch_strength: 0.08
+  palette:
+    high:
+    - 0.56
+    - 0.54
+    - 0.48
+    low:
+    - 0.8
+    - 0.7
+    - 0.48
+    mid:
+    - 0.72
+    - 0.65
+    - 0.44
+    mid_break: 0.3
+  sea_level_rise: 10
+  shade:
+    floor: 0.3
+    sun_altitude: 35
+    sun_azimuth: 315
+  vignette:
+    floor: 0.5
+    strength: 0.4
+  wasteland_wash:
+    cool_push_b: -0.01
+    desaturate: 0.12
+    warm_push_r: 0.015
+  water:
+    deep:
+    - 0.36
+    - 0.4
+    - 0.44
+    depth_range: 50
+    shallow:
+    - 0.58
+    - 0.6
+    - 0.58
+urbanization:
+  blend_strength: 0.6
+  color:
+  - 0.48
+  - 0.46
+  - 0.44
+  enabled: true
+water_labels:
+- name: Aysea Sound
+  lat: 39.15
+  lon: -74.45
+- name: Delaware Flood
+  lat: 39.05
+  lon: -75.25
+- name: Old York Bay
+  lat: 40.5
+  lon: -73.7
+- name: Atlantic
+  lat: 39.6
+  lon: -73.8

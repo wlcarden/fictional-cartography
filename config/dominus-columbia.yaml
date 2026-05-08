@@ -1,0 +1,650 @@
+barriers:
+- corridor:
+    lat_max: 39.3
+    lat_min: 38.92
+    penalty: 500000
+  endpoints:
+    east:
+      lat: 39.22
+      lon: -76.58
+      note: Patapsco inlet
+    west:
+      lat: 39.05
+      lon: -77.2
+      note: Western water boundary
+  label:
+    color:
+    - 200
+    - 150
+    - 90
+    font: bold_13
+    offset:
+    - -30
+    - 15
+    position: midpoint
+    text: THE WALL
+  method: astar_road_network
+  name: The Wall
+  road_types:
+  - motorway
+  - trunk
+  - primary
+  - secondary
+  - tertiary
+  - residential
+  style:
+    color:
+    - 200
+    - 150
+    - 90
+    hash_length: 12
+    hash_marks: true
+    hash_spacing: 14
+    shadow_width: 9
+    width: 6
+  type: wall
+- corridor:
+    deviation_penalty: 50000
+    max_deviation: 0.5
+    max_deviation_penalty: 300000
+    south_hard_penalty: 200000
+  direction: north
+  label:
+    color:
+    - 180
+    - 165
+    - 135
+    font: regular_12
+    offset:
+    - 10
+    - -18
+    position: three_quarter
+    text: The Patrol Line
+  method: astar_offset
+  name: The Patrol Line
+  offset_degrees: 0.1
+  reference_barrier: The Wall
+  style:
+    color:
+    - 180
+    - 165
+    - 135
+    dash_length: 18
+    dashed: true
+    shadow_width: 6
+    width: 4
+  type: patrol
+bounds:
+  aspect_ratio: '3:4'
+  lat_n: 39.45
+  lat_s: 38.2
+  lon_e: -76.33
+  lon_w: -77.27
+buffer_zone:
+  between:
+  - The Wall
+  - The Patrol Line
+  enabled: true
+  hatching:
+    color:
+    - 200
+    - 150
+    - 60
+    - 120
+    direction: diagonal
+    spacing: 14
+  symbols:
+    character: "\u2623"
+    color:
+    - 190
+    - 140
+    - 50
+    count: 12
+    font: DejaVuSans
+    font_size: 22
+    placement: midline
+canvas:
+  border: 80
+  border_lines:
+  - color:
+    - 50
+    - 40
+    - 30
+    offset: 8
+    width: 4
+  - color:
+    - 70
+    - 55
+    - 40
+    offset: 16
+    width: 2
+  - color:
+    - 90
+    - 72
+    - 50
+    offset: 22
+    width: 2
+  paper_color:
+  - 210
+  - 190
+  - 150
+colors:
+  bright:
+  - 235
+  - 220
+  - 185
+  cyan:
+  - 170
+  - 185
+  - 195
+  district:
+  - 215
+  - 200
+  - 165
+  gold:
+  - 235
+  - 220
+  - 185
+  green:
+  - 130
+  - 200
+  - 110
+  parch:
+  - 200
+  - 190
+  - 170
+  red:
+  - 200
+  - 130
+  - 90
+  shadow:
+  - 30
+  - 25
+  - 18
+  submerged:
+  - 190
+  - 215
+  - 230
+  water:
+  - 200
+  - 210
+  - 215
+  white:
+  - 235
+  - 225
+  - 200
+contamination:
+  edge_noise:
+    octaves:
+    - scale: 2
+      weight: 0.3
+    - scale: 5
+      weight: 0.25
+    - scale: 11
+      weight: 0.2
+    - scale: 23
+      weight: 0.15
+    - scale: 47
+      weight: 0.1
+    seed: 666
+  enabled: true
+  method: multi_source_dijkstra
+  name: Omni Plague
+  overlay:
+    color:
+    - 0.05
+    - 0.03
+    - 0.07
+    max_opacity: 0.55
+    noise_variation: 0.06
+  sources:
+    epicenter:
+      lat: 38.9
+      lon: -77.02
+    query: node["railway"="station"]["network"="WMATA"]
+    type: osm_query
+    weight_scale: 100
+    weighting: distance_from_epicenter
+  spread:
+    blocked_by:
+    - water
+    - The Wall
+    max_distance: 1200
+credit: Fan map by Leighton Carden for the Dystopia Rising Universe
+fonts:
+  bold_13:
+    file: DejaVuSerif-Bold.ttf
+    size: 13
+  bold_14:
+    file: DejaVuSerif-Bold.ttf
+    size: 14
+  italic_16:
+    file: DejaVuSerif-Italic.ttf
+    size: 16
+  italic_9:
+    file: DejaVuSerif-Italic.ttf
+    size: 9
+  major:
+    file: DejaVuSerif-Bold.ttf
+    size: 18
+  minor:
+    file: DejaVuSerif.ttf
+    size: 11
+  region:
+    file: DejaVuSerif-Italic.ttf
+    size: 38
+  regular_12:
+    file: DejaVuSerif.ttf
+    size: 12
+  settle:
+    file: DejaVuSerif.ttf
+    size: 13
+  tiny:
+    file: DejaVuSerif.ttf
+    size: 9
+legend:
+  entries:
+  - color: bright
+    label: Major settlement
+    type: circle
+  - color: district
+    label: Bahlsmore district
+    type: circle
+  - color: submerged
+    label: Submerged feature
+    type: circle
+  - color:
+    - 185
+    - 160
+    - 115
+    label: Pre-fall road
+    type: line
+  - color:
+    - 160
+    - 145
+    - 118
+    label: Terrain / region
+    type: italic_text
+name: DOMINUS COLUMBIA
+reference_cities:
+  cities:
+  - lat: 38.9
+    lon: -77.04
+    name: Washington DC
+  - lat: 39.29
+    lon: -76.61
+    name: Baltimore
+  - lat: 38.98
+    lon: -76.49
+    name: Annapolis
+  - lat: 38.63
+    lon: -76.89
+    name: Waldorf
+  - lat: 39.18
+    lon: -76.67
+    name: BWI Airport
+  - lat: 38.81
+    lon: -76.87
+    name: Joint Base Andrews
+  enabled: false
+regions:
+- center:
+  - 39.22
+  - -76.97
+  color: bright
+  name: The Red Embankment
+  tint:
+    adjustments:
+      b: -0.06
+      g: -0.05
+      r: 0.12
+    center:
+    - 39.25
+    - -76.9
+    inner_radius: 0.06
+    outer_radius: 0.25
+  type: region_label
+- center:
+  - 39.22
+  - -77.18
+  color: bright
+  name: Black Hills
+  tint:
+    adjustments:
+      b: -0.02
+      g: -0.05
+      r: -0.06
+    center:
+    - 39.22
+    - -77.22
+    inner_radius: 0.03
+    outer_radius: 0.15
+  type: region_label
+- center:
+  - 38.42
+  - -76.95
+  color: bright
+  name: Zekiah Swamp
+  tint:
+    adjustments:
+      b: -0.09
+      g: 0.04
+      r: -0.11
+    direction: south
+    range: 0.25
+    source:
+    - 38.65
+    - -76.92
+    type: directional
+  type: region_label
+- name: Andrews Blast Zone
+  tint:
+    adjustments:
+      b: -0.03
+      g: 0.015
+      r: 0.04
+    center:
+    - 38.81
+    - -76.87
+    desaturate: 0.8
+    inner_radius: 0.02
+    outer_radius: 0.1
+  type: tint_only
+- center:
+  - 38.65
+  - -76.5
+  color: bright
+  name: Cheapskate Beaches
+  rotation: 0
+  tint:
+    adjustments:
+      b: 0
+      g: 0.08
+      r: 0.12
+    direction: east
+    range: 0.85
+    source:
+    - 38.75
+    - -77.3
+    strength: 0.85
+    type: directional
+  type: region_label
+- name: Wasteland North
+  tint:
+    adjustments:
+      b: 0
+      g: 0
+      r: 0
+    desaturate: 0.4
+    direction: north
+    range: 0.4
+    source:
+    - 39.15
+    - -76.8
+    type: directional
+  type: tint_only
+- name: Bailey Interior
+  tint:
+    adjustments:
+      b: -0.04
+      g: 0.04
+      r: 0.05
+    center:
+    - 38.92
+    - -76.85
+    inner_radius: 0.05
+    outer_radius: 0.4
+    strength: 0.6
+  type: tint_only
+roads:
+  mask_by_water: true
+  networks:
+  - US:I
+  - US:US
+  - US:MD
+  shadow_color:
+  - 45
+  - 38
+  - 28
+  styles:
+    interstate:
+      color:
+      - 185
+      - 160
+      - 115
+      network: US:I
+      shadow_width: 2
+      width: 3
+    state_route:
+      color:
+      - 155
+      - 135
+      - 102
+      network: US:MD
+      shadow_width: 1
+      width: 2
+    us_highway:
+      color:
+      - 160
+      - 140
+      - 105
+      network: US:US
+      shadow_width: 1
+      width: 2
+settlements:
+- color: bright
+  font: major
+  label_offset:
+  - 14
+  - -12
+  lat: 39.29
+  lon: -76.62
+  marker: circled_x
+  name: Bahlsmore
+  radius: 16
+  rotation: 0
+- color: bright
+  font: major
+  label_offset:
+  - -118
+  - -12
+  lat: 38.98
+  lon: -76.52
+  marker: circled_x
+  name: Anna Polis
+  radius: 16
+- color: bright
+  font: major
+  label_offset:
+  - 14
+  - -8
+  lat: 38.895
+  lon: -77.02
+  marker: circled_x
+  name: City Center
+  note: "DC ruins \u2014 Omni epicenter"
+  radius: 16
+- color: district
+  font: minor
+  label_offset:
+  - 16
+  - 12
+  lat: 39.26
+  lon: -76.58
+  marker: diamond
+  name: 'Old Mr. Henry
+
+    Shipyard'
+  note: "Bahlsmore district \u2014 harbor"
+  radius: 10
+- color: district
+  font: minor
+  label_offset:
+  - -90
+  - 8
+  lat: 39.28
+  lon: -76.64
+  marker: diamond
+  name: BAO Yard
+  note: "Bahlsmore district \u2014 rail yard"
+  radius: 10
+- color: bright
+  label_offset:
+  - 14
+  - -8
+  lat: 38.81
+  lon: -76.87
+  marker: x
+  name: 'J. Andrews
+
+    Tech. Enclave'
+  note: "Blast zone center \u2014 irradiated"
+  radius: 10
+- color: bright
+  label_offset:
+  - 14
+  - -8
+  lat: 39.18
+  lon: -76.67
+  marker: x
+  name: 'International
+
+    Skyport'
+  note: BWI airport ruins
+  radius: 10
+- color: bright
+  label_offset:
+  - 14
+  - -8
+  lat: 38.63
+  lon: -76.89
+  marker: x
+  name: The Dorf
+  note: "Waldorf \u2014 southern Bailey"
+  radius: 10
+- color: bright
+  label_offset:
+  - 12
+  - -8
+  lat: 38.54
+  lon: -76.58
+  marker: x
+  name: Prince's Port
+  radius: 10
+- color: bright
+  label_offset:
+  - 12
+  - -8
+  lat: 38.93
+  lon: -76.75
+  marker: x
+  name: The Refuge
+  radius: 10
+- color: bright
+  label_offset:
+  - 12
+  - -8
+  lat: 38.9
+  lon: -76.68
+  marker: x
+  name: The Mills
+  radius: 10
+- color: bright
+  label_offset:
+  - 12
+  - -8
+  lat: 38.97
+  lon: -77.17
+  marker: x
+  name: 'Ellistown
+
+    Landing'
+  radius: 10
+- color: submerged
+  font: minor
+  label_side: left
+  lat: 38.87
+  lon: -77.06
+  marker: dot
+  name: 'Pentagon
+
+    Water Vault'
+  note: Submerged
+  radius: 6
+- color: submerged
+  font: minor
+  label_offset:
+  - -6
+  - 8
+  lat: 38.85
+  lon: -77.04
+  marker: dot
+  name: Cristal City
+  note: Submerged
+  radius: 6
+sinking:
+  enabled: true
+  method: nan_mask
+  region: Virginia
+  source: virginia_border.json
+subtitle: Survey of the Bailey & the Omni Containment Zone
+terrain:
+  coastline_darken:
+    dilation: 1
+    factor: 0.78
+  downsample: 4
+  noise:
+    drift_sigma: 35
+    drift_strength: 0.07
+    scorch_sigma: 18
+    scorch_strength: 0.05
+  palette:
+    high:
+    - 0.47
+    - 0.39
+    - 0.27
+    low:
+    - 0.82
+    - 0.76
+    - 0.55
+    mid:
+    - 0.65
+    - 0.58
+    - 0.41
+    mid_break: 0.5
+  sea_level_rise: 15
+  shade:
+    floor: 0.4
+    sun_altitude: 35
+    sun_azimuth: 315
+  vignette:
+    floor: 0.55
+    strength: 0.35
+  wasteland_wash:
+    cool_push_b: -0.008
+    desaturate: 0.1
+    warm_push_r: 0.012
+  water:
+    deep:
+    - 0.22
+    - 0.32
+    - 0.48
+    depth_range: 50
+    shallow:
+    - 0.45
+    - 0.55
+    - 0.65
+urbanization:
+  blend_strength: 0.55
+  color:
+  - 0.52
+  - 0.5
+  - 0.48
+  enabled: true
+water_labels:
+- lat: 38.82
+  lon: -77.22
+  name: Patomic Bay
+- lat: 38.95
+  lon: -76.48
+  name: Cheapskate Bay

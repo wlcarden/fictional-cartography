@@ -1,0 +1,4434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cartograph — Narrative</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Eczar:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink:        #13100b;
+  --ink-1:      #181410;
+  --ink-2:      #1f1a14;
+  --ink-3:      #261f18;
+  --rule:       #2d2620;
+  --rule-2:     #3a3127;
+
+  --bone:       #ded2ba;
+  --bone-2:     #c2b699;
+  --bone-dim:   #8b8270;
+  --bone-faint: #5b5448;
+
+  --brass:        #b88a3c;
+  --brass-bright: #e0b160;
+  --brass-deep:   #7a5a23;
+
+  --blood:      #8a3a30;
+  --leaf:       #6b8033;
+
+  /* Narrative-specific palette additions (semantic colors for the
+     hazard / surveying overlay vocabulary). */
+  --hazard-amber:  #f4b860;
+  --hazard-amber-deep: #a87a2c;
+  --hazard-crimson: #d9534f;
+  --hazard-cyan:   #3fb7c9;
+  --instrument-fluor: #7ee3d2;
+  --plague-purple:  #6b3a82;
+
+  --serif:   "Fraunces", "Times New Roman", serif;
+  --display: "Eczar", "Fraunces", serif;
+  --mono:    "IBM Plex Mono", ui-monospace, "Menlo", monospace;
+
+  --rail-l: 268px;
+  --rail-r: 332px;
+  --top:    52px;
+  --bot:    26px;
+
+  /* Pick-mode timing curves (per design spec):
+     engage   — slow first-quartile, fast finish (the "switch click")
+     disengage — front-loaded, abrupt (instrument off)
+     anchor   — slight overshoot, like a real anchor settling */
+  --ease-engage:    cubic-bezier(0.85, 0, 0.2, 1);
+  --ease-disengage: cubic-bezier(0.5, 0, 1, 0.5);
+  --ease-anchor:    cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Build-status pill — surfaces save state + render trigger in
+   the topbar. Lives between modes nav and project switcher.
+   ============================================================ */
+.build-pill {
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 32px;
+  border: 1px solid var(--rule-2);
+  background: var(--ink);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  transition: border-color 200ms ease, background 200ms ease;
+  align-self: center;
+  margin: 0 12px 0 0;
+  white-space: nowrap;
+}
+.build-pill__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--bone-faint);
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+.build-pill__label {
+  color: var(--bone-2);
+  letter-spacing: 0.28em;
+}
+.build-pill__action {
+  appearance: none;
+  background: transparent;
+  border: 0; border-left: 1px solid var(--rule-2);
+  margin: 0 -14px 0 0;
+  padding: 0 12px;
+  height: 100%;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--brass-bright);
+  transition: background 100ms ease, color 100ms ease;
+}
+.build-pill__action:hover {
+  background: var(--brass-deep);
+  color: var(--ink);
+}
+.build-pill__action[disabled] {
+  cursor: wait;
+  color: var(--bone-faint);
+  opacity: 0.6;
+}
+/* State variants */
+.build-pill[data-build="ready"]    .build-pill__dot { background: var(--leaf); }
+.build-pill[data-build="ready"]    { border-color: rgba(107, 128, 51, 0.4); }
+.build-pill[data-build="ready"]    .build-pill__label { color: var(--leaf); }
+.build-pill[data-build="dirty"]    .build-pill__dot { background: var(--hazard-amber); }
+.build-pill[data-build="dirty"]    { border-color: var(--hazard-amber-deep); }
+.build-pill[data-build="dirty"]    .build-pill__label { color: var(--hazard-amber); }
+.build-pill[data-build="stale"]    .build-pill__dot { background: var(--brass); }
+.build-pill[data-build="stale"]    { border-color: var(--brass-deep); }
+.build-pill[data-build="stale"]    .build-pill__label { color: var(--brass-bright); }
+.build-pill[data-build="rendering"] {
+  border-color: var(--plague-purple);
+  background:
+    linear-gradient(90deg, transparent 0%, transparent 30%,
+      rgba(107, 58, 130, 0.15) 45%, rgba(107, 58, 130, 0.30) 50%,
+      rgba(107, 58, 130, 0.15) 55%, transparent 70%, transparent 100%);
+  background-size: 200% 100%;
+  animation: build-shimmer 1.4s linear infinite;
+}
+.build-pill[data-build="rendering"] .build-pill__dot {
+  background: var(--plague-purple);
+  box-shadow: 0 0 6px rgba(107, 58, 130, 0.6);
+}
+.build-pill[data-build="rendering"] .build-pill__label {
+  color: var(--plague-purple);
+}
+.build-pill[data-build="error"]    .build-pill__dot { background: var(--hazard-crimson); }
+.build-pill[data-build="error"]    .build-pill__label { color: var(--hazard-crimson); }
+.build-pill[data-build="error"]    { border-color: var(--hazard-crimson); }
+@keyframes build-shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Stage indicator inside the pill — three small notches showing
+   which stages are stale (s2/s3/s4). Clean micro-detail. */
+.build-pill__stages {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 6px);
+  gap: 2px;
+}
+.build-pill__stage {
+  width: 6px; height: 6px;
+  background: var(--bone-faint);
+  opacity: 0.4;
+}
+.build-pill__stage.is-stale {
+  background: var(--hazard-amber);
+  opacity: 1;
+}
+
+/* ============================================================
+   Page-load reveal — staggered animation that sells the
+   "instruments are powering up" tone of the page. Each major panel
+   fades in with offset translation; coordinated by .has-loaded class.
+   ============================================================ */
+.topbar, .rail, .canvas-pane, .botbar {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 480ms var(--ease-engage),
+    transform 520ms var(--ease-engage);
+}
+.has-loaded .topbar      { opacity: 1; transform: none; transition-delay: 40ms; }
+.has-loaded .rail--left  { opacity: 1; transform: none; transition-delay: 200ms; }
+.has-loaded .canvas-pane { opacity: 1; transform: none; transition-delay: 320ms; }
+.has-loaded .rail--right { opacity: 1; transform: none; transition-delay: 200ms; }
+.has-loaded .botbar      { opacity: 1; transform: none; transition-delay: 480ms; }
+
+/* Layer-row hover: subtle indent + accent bar slide-in. Tells the user
+   "this row is selectable" without using a generic hover-color shift. */
+.layer-row { will-change: padding-left; }
+.layer-row:hover { padding-left: 18px; }
+.layer-row::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0; background: var(--accent, var(--brass));
+  transition: width 140ms ease;
+}
+.layer-row.is-active::before { width: 3px; }
+/* Override CSS specificity: keep is-active behavior consistent */
+
+/* Paper-grain overlay used across the whole UI for atmosphere. */
+.grain {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 999;
+  opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* ---------- top bar (matches sibling pages) ---------- */
+.topbar {
+  height: var(--top);
+  display: grid;
+  grid-template-columns: var(--rail-l) 1fr var(--rail-r);
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule);
+  position: relative; z-index: 10;
+  background: var(--ink-1);
+}
+.brand {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  border-right: 1px solid var(--rule);
+}
+.brand__mark {
+  width: 26px; height: 26px;
+  border: 1px solid var(--brass);
+  display: grid; place-items: center;
+  font-family: var(--serif); font-size: 13px;
+  color: var(--brass-bright); letter-spacing: 0;
+  font-style: italic; font-weight: 400;
+}
+.brand__name {
+  font-family: var(--mono); font-weight: 500;
+  letter-spacing: 0.32em; font-size: 11px;
+  color: var(--bone);
+}
+.brand__name em {
+  color: var(--bone-faint); font-style: normal; margin-left: 6px;
+}
+
+.modes {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 0; justify-self: start;
+}
+.modes__sep {
+  width: 1px; height: 14px; background: var(--rule-2); margin: 0 14px;
+  align-self: center;
+}
+.mode {
+  background: none; border: none; color: var(--bone-dim);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
+  padding: 6px 14px; text-transform: uppercase;
+  position: relative; cursor: pointer;
+  text-decoration: none;
+}
+.mode:hover { color: var(--bone-2); }
+.mode.is-active { color: var(--brass-bright); }
+.mode.is-active::after {
+  content: ""; position: absolute; bottom: -1px; left: 14px; right: 14px;
+  height: 2px; background: var(--brass);
+}
+.mode__num {
+  display: inline-block; opacity: 0.55; margin-right: 8px; font-size: 9.5px;
+  color: var(--bone-faint);
+}
+.mode.is-active .mode__num { color: var(--brass-deep); opacity: 1; }
+
+.project {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 18px; padding: 0 18px;
+  border-left: 1px solid var(--rule);
+}
+.project__name {
+  font-family: var(--serif); font-style: italic;
+  font-size: 19px; font-weight: 400;
+  color: var(--bone);
+  font-variation-settings: "SOFT" 30, "WONK" 1;
+}
+.project__meta {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.project__meta b { color: var(--bone-dim); font-weight: 500; }
+
+/* ---------- workspace ---------- */
+.workspace {
+  height: calc(100vh - var(--top) - var(--bot));
+  display: grid;
+  grid-template-columns: var(--rail-l) 1fr var(--rail-r);
+}
+.rail {
+  background: var(--ink-1);
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.rail--left  { border-right: 1px solid var(--rule); }
+.rail--right { border-left:  1px solid var(--rule); }
+
+.rail__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.rail__head h3 {
+  margin: 0; font-family: var(--mono); font-weight: 500;
+  font-size: 10.5px; letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+.rail__head .count {
+  font-family: var(--mono); font-size: 9.5px;
+  color: var(--bone-faint); letter-spacing: 0.18em;
+}
+
+/* ---------- layer rail (specific to Narrative) ---------- */
+.layers { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+
+.layer-section-head {
+  padding: 14px 18px 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink);
+}
+
+.layer-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 18px 11px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+.layer-row:hover { background: var(--ink-2); }
+.layer-row.is-active { background: var(--ink-2); }
+.layer-row.is-active::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--accent, var(--brass));
+}
+.layer-row.is-disabled { opacity: 0.35; }
+
+/* The glyph cell — uses a distinctive symbol per layer type */
+.layer-glyph {
+  font-family: var(--serif);
+  font-size: 14px;
+  color: var(--accent, var(--bone-dim));
+  text-align: center;
+  font-style: normal;
+  letter-spacing: 0;
+}
+.layer-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--bone);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.layer-name__sub {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-top: 2px;
+}
+.layer-row.is-active .layer-name { color: var(--brass-bright); }
+.layer-row.is-active .layer-name__sub { color: var(--brass-deep); }
+
+.layer-status {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  text-align: right;
+}
+.layer-status.ok    { color: var(--leaf); }
+.layer-status.warn  { color: var(--hazard-amber); }
+.layer-status.error { color: var(--hazard-crimson); }
+.layer-status.off   { color: var(--bone-faint); font-style: italic; }
+
+/* ---------- canvas pane ---------- */
+.canvas-pane {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--ink);
+  min-width: 0;
+}
+.canvas-bar {
+  height: 38px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink-1);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--bone-faint);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.canvas-bar__title { color: var(--bone-2); letter-spacing: 0.32em; }
+.canvas-bar__divider {
+  width: 1px; height: 14px; background: var(--rule-2);
+}
+.canvas-bar__readout {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--bone-dim); letter-spacing: 0.16em;
+}
+.canvas-bar__readout b { color: var(--brass); font-weight: 500; }
+.canvas-bar__spacer { flex: 1; }
+
+.canvas-stage {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at center, var(--ink-2) 0%, var(--ink) 60%),
+    var(--ink);
+}
+.canvas-stage::before {
+  content: "";
+  position: absolute; inset: 24px;
+  border: 1px solid var(--rule);
+  pointer-events: none;
+}
+
+.canvas-frame {
+  position: relative;
+  max-width: calc(100% - 80px);
+  max-height: calc(100% - 80px);
+}
+.canvas-frame img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - var(--top) - var(--bot) - 38px - 80px);
+  width: auto; height: auto;
+  border: 1px solid var(--rule-2);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+}
+.canvas-frame svg.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.canvas-empty {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--bone-faint);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 60px 24px;
+  text-align: center;
+  max-width: 520px;
+  position: relative;
+  /* Subtle frame suggesting an instrument readout */
+  border: 1px solid var(--rule-2);
+  background:
+    linear-gradient(135deg, transparent 49.5%, rgba(184, 138, 60, 0.04) 49.5%,
+      rgba(184, 138, 60, 0.04) 50.5%, transparent 50.5%),
+    linear-gradient(45deg, transparent 49.5%, rgba(184, 138, 60, 0.04) 49.5%,
+      rgba(184, 138, 60, 0.04) 50.5%, transparent 50.5%),
+    var(--ink-1);
+  background-size: 14px 14px, 14px 14px, auto;
+}
+.canvas-empty::before, .canvas-empty::after {
+  /* Brass corner brackets — like a viewfinder */
+  content: "";
+  position: absolute;
+  width: 16px; height: 16px;
+  border-color: var(--brass);
+  border-style: solid;
+}
+.canvas-empty::before {
+  top: 8px; left: 8px;
+  border-width: 1px 0 0 1px;
+}
+.canvas-empty::after {
+  bottom: 8px; right: 8px;
+  border-width: 0 1px 1px 0;
+}
+.canvas-empty__icon {
+  display: block;
+  font-family: var(--serif);
+  font-size: 38px;
+  font-style: normal;
+  color: var(--brass-deep);
+  margin-bottom: 12px;
+  letter-spacing: 0;
+  /* Faint pulse — the instrument is "looking" */
+  animation: empty-pulse 2.6s ease-in-out infinite;
+}
+@keyframes empty-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1.0; }
+}
+.canvas-empty b {
+  display: block;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bone-2);
+  margin-bottom: 8px;
+}
+.canvas-empty .hint {
+  font-family: var(--mono);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+  margin-top: 14px;
+  line-height: 1.7;
+  font-size: 11px;
+}
+.canvas-empty .hint a,
+.canvas-empty .hint button {
+  color: var(--brass-bright);
+  text-decoration: none;
+  border: 1px solid var(--brass-deep);
+  background: transparent;
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin: 0 4px;
+  transition: background 100ms ease, color 100ms ease;
+}
+.canvas-empty .hint button:hover,
+.canvas-empty .hint a:hover {
+  background: var(--brass);
+  color: var(--ink);
+}
+
+/* ---------- inspector (right rail) ---------- */
+.inspector {
+  display: flex; flex-direction: column;
+  min-height: 0; overflow-y: auto;
+}
+.inspector__head {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--rule);
+  display: grid; gap: 4px;
+}
+.inspector__eyebrow {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--accent, var(--bone-faint));
+}
+.inspector__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0.02em;
+  color: var(--bone);
+  line-height: 1.15;
+}
+.inspector__lead {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--bone-dim);
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.inspector__body { padding: 14px 18px 24px; }
+.inspector__empty {
+  padding: 36px 22px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--bone-faint);
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+  text-align: center;
+}
+.inspector__empty .glyph {
+  display: block;
+  font-family: var(--serif);
+  font-size: 36px;
+  color: var(--bone-faint);
+  margin-bottom: 14px;
+  font-style: italic;
+}
+
+/* "Field card" — instrument-faced data block in the inspector */
+.field-card {
+  background: var(--ink-2);
+  border: 1px solid var(--rule);
+  position: relative;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.field-card::before {
+  /* Brass top edge */
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,
+    transparent, var(--brass), transparent);
+  opacity: 0.5;
+}
+.field-card__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+}
+.field-card__head h4 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bone-2);
+  font-weight: 500;
+}
+.field-card__head .stat {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--brass);
+}
+.field-card .pair {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+.field-card .pair dt {
+  color: var(--bone-faint);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 9px;
+}
+.field-card .pair dd {
+  margin: 0;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.field-card .pair dd .neutral { color: var(--bone-dim); }
+.field-card .pair dd .accent  { color: var(--accent, var(--brass-bright)); }
+.field-card .pair dd .warn    { color: var(--hazard-amber); }
+
+/* Stratigraphic separator — replaces a generic <hr> */
+.strata {
+  display: flex; align-items: center; gap: 8px;
+  margin: 18px 0 14px;
+  color: var(--bone-faint);
+}
+.strata::before, .strata::after {
+  content: ""; flex: 1; height: 1px;
+  background: repeating-linear-gradient(
+    90deg, var(--rule-2) 0 6px, transparent 6px 12px);
+}
+.strata__label {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+/* ---------- editable widgets ---------- */
+/* The dt/dd grid is shared between read-only and editable cards.
+   Edits are inputs styled to look like instrument-faced data, not
+   form controls. No browser default chrome. */
+.field-card .pair--editable dd {
+  display: flex; align-items: center; gap: 6px;
+}
+.field-input,
+.field-select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dotted var(--rule-2);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  padding: 1px 0;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  outline: none;
+  transition: border-color 100ms ease, color 100ms ease;
+}
+.field-input:focus,
+.field-select:focus {
+  border-bottom-color: var(--brass);
+  color: var(--brass-bright);
+}
+.field-input::selection { background: var(--brass-deep); color: var(--bone); }
+.field-input--small { width: 50px; flex: none; }
+.field-input--num   { text-align: right; font-variant-numeric: tabular-nums; }
+
+.field-select {
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--brass) 50%),
+    linear-gradient(135deg, var(--brass) 50%, transparent 50%);
+  background-position:
+    calc(100% - 8px) calc(50% - 1px),
+    calc(100% - 4px) calc(50% - 1px);
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  padding-right: 16px;
+}
+.field-select option {
+  background: var(--ink-2);
+  color: var(--bone);
+}
+
+/* Toggle pill — for boolean fields like enabled / hash_marks / dashed */
+.field-toggle {
+  appearance: none;
+  background: var(--ink-3);
+  border: 1px solid var(--rule-2);
+  width: 32px; height: 16px;
+  position: relative;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+  flex: none;
+}
+.field-toggle::after {
+  content: "";
+  position: absolute;
+  top: 1px; left: 1px;
+  width: 12px; height: 12px;
+  background: var(--bone-faint);
+  transition: left 140ms ease, background 120ms ease;
+}
+.field-toggle[aria-checked="true"] {
+  background: var(--brass-deep);
+  border-color: var(--brass);
+}
+.field-toggle[aria-checked="true"]::after {
+  left: 17px;
+  background: var(--brass-bright);
+}
+.field-toggle__label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-left: auto;
+}
+.field-toggle[aria-checked="true"] + .field-toggle__label {
+  color: var(--brass);
+}
+
+/* Color swatch — clicking opens native color picker (hidden input) */
+.field-color {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  position: relative;
+}
+.field-color__swatch {
+  display: inline-block;
+  width: 18px; height: 12px;
+  border: 1px solid var(--rule-2);
+  background: var(--current, var(--bone-dim));
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+.field-color__swatch:hover { border-color: var(--brass); }
+.field-color__rgb {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--bone-dim);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.field-color input[type="color"] {
+  position: absolute;
+  opacity: 0; pointer-events: none; width: 0; height: 0;
+}
+
+.field-offset {
+  display: flex; align-items: baseline; gap: 8px;
+}
+.field-offset__label {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--bone-faint);
+  letter-spacing: 0.16em;
+}
+
+/* Cross-page jump button (used in constraint card) */
+.jump-button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--brass-deep);
+  color: var(--brass-bright);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: background 120ms ease, color 120ms ease;
+  text-decoration: none;
+}
+.jump-button:hover {
+  background: var(--brass-deep);
+  color: var(--ink);
+}
+.jump-button .arrow { font-size: 12px; }
+
+/* ---------- save status pill ---------- */
+.save-status {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  background: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.save-status__dot {
+  width: 6px; height: 6px;
+  background: var(--bone-faint);
+  display: inline-block;
+}
+.save-status[data-state="saved"]  .save-status__dot { background: var(--leaf); }
+.save-status[data-state="dirty"]  .save-status__dot { background: var(--hazard-amber); }
+.save-status[data-state="saving"] .save-status__dot {
+  background: var(--brass-bright);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+.save-status[data-state="error"]  .save-status__dot { background: var(--hazard-crimson); }
+.save-status[data-state="saved"]  .save-status__text { color: var(--leaf); }
+.save-status[data-state="dirty"]  .save-status__text { color: var(--hazard-amber); }
+.save-status[data-state="saving"] .save-status__text { color: var(--brass-bright); }
+.save-status[data-state="error"]  .save-status__text { color: var(--hazard-crimson); }
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.4); }
+}
+.save-status__detail {
+  margin-left: auto;
+  color: var(--bone-faint);
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-size: 9px;
+}
+
+/* Hazard chip — used in inspector for "this needs attention" pills */
+.chip {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--rule-2);
+  color: var(--bone-dim);
+  background: var(--ink);
+}
+.chip.ok    { color: var(--leaf); border-color: var(--leaf); }
+.chip.warn  { color: var(--hazard-amber); border-color: var(--hazard-amber-deep); }
+.chip.error { color: var(--hazard-crimson); border-color: var(--hazard-crimson); }
+.chip.brass { color: var(--brass-bright); border-color: var(--brass-deep); }
+
+/* ---------- bottom bar ---------- */
+.botbar {
+  height: var(--bot);
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--bone-faint);
+}
+.botbar b {
+  color: var(--brass-deep); font-weight: 500;
+}
+.botbar a {
+  color: var(--bone-dim); text-decoration: none;
+  border-bottom: 1px dotted var(--bone-faint);
+}
+.botbar a:hover { color: var(--bone-2); }
+
+/* ============================================================
+   Pick-mode primitives (Ship 3)
+   ============================================================ */
+
+/* Cursor swap — fluorescent reticle replaces brass crosshair while
+   pick-mode is active on the canvas. */
+.canvas-stage.is-pickmode,
+.canvas-stage.is-pickmode * {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><g fill='none' stroke='%237EE3D2' stroke-width='1' stroke-linecap='round'><circle cx='24' cy='24' r='22' opacity='0.4'/><circle cx='24' cy='24' r='8'  opacity='0.7'/><line x1='24' y1='0'  x2='24' y2='14'/><line x1='24' y1='34' x2='24' y2='48'/><line x1='0'  y1='24' x2='14' y2='24'/><line x1='34' y1='24' x2='48' y2='24'/><circle cx='24' cy='24' r='1.5' fill='%237EE3D2' stroke='none'/></g></svg>") 24 24,
+    crosshair;
+}
+
+/* Matte — 60% black wash that fades in over the cached preview when
+   pick-mode engages. The 80ms transition delay creates the "click of
+   the switch" dead zone before anything visible happens. */
+.canvas-matte {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  transition: background 80ms linear 80ms;
+  z-index: 4;
+  overflow: hidden;
+}
+.canvas-matte::after {
+  /* Sweep highlight — a brighter band traverses the canvas during engage,
+     simulating an analog instrument's filaments warming. Single pass. */
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%, transparent 40%,
+    rgba(126, 227, 210, 0.22) 48%,
+    rgba(126, 227, 210, 0.36) 50%,
+    rgba(126, 227, 210, 0.22) 52%,
+    transparent 60%, transparent 100%);
+  background-size: 220% 100%;
+  background-position: -120% 0;
+  opacity: 0;
+  transition:
+    opacity 80ms linear 80ms,
+    background-position 280ms linear 80ms;
+}
+.canvas-matte.is-active {
+  background: rgba(0, 0, 0, 0.55);
+}
+.canvas-matte.is-active::after {
+  opacity: 1;
+  background-position: 220% 0;
+}
+
+/* Per-segment road stroke. Each segment gets:
+     stroke-dasharray  = its length (set in JS at draw time)
+     stroke-dashoffset = its length (initial — invisible)
+     transition-delay  = 80 + edge_dist_norm * 200 ms (set in JS)
+   When pick-mode engages, dashoffset → 0 reveals the segment. */
+.road-bloom-stroke {
+  fill: none;
+  stroke: var(--instrument-fluor);
+  stroke-width: 0.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 1.4px var(--instrument-fluor));
+  opacity: 0;
+  transition:
+    stroke-dashoffset 200ms var(--ease-engage),
+    opacity 100ms linear 80ms;
+}
+.canvas-stage.is-pickmode .road-bloom-stroke {
+  stroke-dashoffset: 0 !important;
+  opacity: 1;
+}
+
+/* Snap candidate — pulsing teal dot on nearest road node.
+   Three states: invisible (no class), breathing, locked. */
+.snap-candidate {
+  fill: var(--instrument-fluor);
+  stroke: var(--instrument-fluor);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 0 4px var(--instrument-fluor));
+  transform-origin: center;
+  transition: transform 120ms ease, opacity 120ms ease, fill 120ms linear, stroke 120ms linear;
+  opacity: 0.85;
+}
+.snap-candidate--breathing {
+  animation: snap-breathe 800ms ease-in-out infinite;
+}
+.snap-candidate--locked {
+  animation: none;
+  opacity: 1;
+  transform: scale(1.4);
+  filter: drop-shadow(0 0 6px var(--instrument-fluor));
+}
+.snap-candidate--disconnected {
+  fill: var(--hazard-amber);
+  stroke: var(--hazard-amber);
+  filter: drop-shadow(0 0 5px var(--hazard-amber));
+}
+@keyframes snap-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1.0); }
+  50%      { opacity: 1.0;  transform: scale(1.18); }
+}
+
+/* Cursor-attached coordinate readout — follows the mouse during pick mode.
+   Positioned via inline style; pointer-events disabled. */
+.pickmode-cursor-readout {
+  position: fixed;
+  pointer-events: none;
+  z-index: 60;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--instrument-fluor);
+  background: rgba(19, 16, 11, 0.85);
+  padding: 3px 8px;
+  border: 1px solid rgba(126, 227, 210, 0.3);
+  text-shadow: 0 0 4px rgba(126, 227, 210, 0.4);
+  white-space: nowrap;
+  display: none;
+  /* No transition — must follow cursor instantaneously */
+}
+.pickmode-cursor-readout.is-visible { display: block; }
+.pickmode-cursor-readout::before {
+  content: "";
+  position: absolute;
+  left: -8px; top: 50%;
+  width: 6px; height: 1px;
+  background: var(--instrument-fluor);
+  opacity: 0.55;
+}
+
+/* Pick-mode banner — top of canvas, dual purpose: prompt + exit. */
+.pickmode-banner {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 36px;
+  background: rgba(19, 16, 11, 0.92);
+  border-bottom: 1px solid rgba(126, 227, 210, 0.45);
+  display: flex; align-items: stretch;
+  pointer-events: auto;
+  z-index: 6;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  color: var(--bone);
+  transform: translateY(-100%);
+  transition: transform 240ms var(--ease-engage) 80ms;
+}
+.canvas-stage.is-pickmode .pickmode-banner {
+  transform: translateY(0);
+}
+.pickmode-banner__strip {
+  width: 3px;
+  background: var(--brass);
+  flex: none;
+}
+.pickmode-banner.is-idle .pickmode-banner__strip {
+  animation: strip-pulse 6s ease-in-out infinite;
+}
+@keyframes strip-pulse {
+  0%, 88%, 100% { opacity: 1; }
+  44%           { opacity: 0.35; }
+}
+.pickmode-banner__label {
+  display: flex; align-items: center;
+  padding: 0 16px;
+  border-right: 1px solid rgba(126, 227, 210, 0.15);
+  color: var(--instrument-fluor);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+.pickmode-banner__prompt {
+  flex: 1;
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 16px;
+  color: var(--bone);
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  text-transform: none;
+  transition: opacity 80ms ease;
+  min-width: 0;
+}
+.pickmode-banner__prompt.is-swapping { opacity: 0; }
+.pickmode-banner__prompt-snap {
+  color: var(--bone-dim);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  font-style: normal;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pickmode-banner__prompt-snap b {
+  color: var(--instrument-fluor);
+  font-weight: 500;
+}
+.pickmode-banner__prompt-snap em {
+  color: var(--hazard-amber);
+  font-style: normal;
+}
+.pickmode-banner__esc {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px;
+  border-left: 1px solid rgba(126, 227, 210, 0.15);
+  background: transparent;
+  color: var(--bone-dim);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+  border-top: 0; border-right: 0; border-bottom: 0;
+}
+.pickmode-banner__esc:hover {
+  background: rgba(126, 227, 210, 0.08);
+  color: var(--instrument-fluor);
+}
+.pickmode-banner__esc kbd {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 2px 5px;
+  border: 1px solid var(--rule-2);
+  background: var(--ink);
+  color: var(--bone-2);
+  letter-spacing: 0;
+}
+.pickmode-banner__esc.is-pressed {
+  animation: esc-flash 220ms ease-out;
+}
+@keyframes esc-flash {
+  0%   { background: rgba(126, 227, 210, 0.5); color: var(--ink); }
+  100% { background: transparent;                color: var(--bone-dim); }
+}
+
+/* Endpoint anchor states */
+.endpoint-anchor {
+  transition:
+    opacity 240ms ease,
+    transform 150ms var(--ease-anchor);
+}
+.endpoint-anchor--ghosting { opacity: 0.45; }
+.endpoint-anchor--committing {
+  /* Initial state of the drop animation — applied for one frame, then
+     transition fires back to default. JS toggles this class. */
+  transform: scale(2.6);
+  opacity: 0;
+}
+
+/* ============================================================
+   Ship 4 — Buffer zone editor primitives
+   ============================================================ */
+
+/* Glyph grid picker — 6 cols × 4 rows of hazard symbols. Each cell is
+   a brass-rimmed black square with the glyph centered. Selected cell
+   has a fluorescent teal border + glow. */
+.glyph-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  background: var(--ink);
+  padding: 2px;
+  border: 1px solid var(--rule-2);
+  margin-top: 8px;
+}
+.glyph-picker__cell {
+  appearance: none;
+  background: var(--ink-2);
+  border: 1px solid transparent;
+  color: var(--bone-dim);
+  font-family: var(--serif);
+  font-size: 16px;
+  width: 100%;
+  aspect-ratio: 1;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition:
+    background 100ms ease,
+    color 100ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+  padding: 0;
+  line-height: 1;
+}
+.glyph-picker__cell:hover {
+  background: var(--ink-3);
+  color: var(--bone);
+  border-color: var(--brass-deep);
+}
+.glyph-picker__cell.is-selected {
+  background: var(--ink);
+  color: var(--instrument-fluor);
+  border-color: var(--instrument-fluor);
+  box-shadow:
+    inset 0 0 0 1px rgba(126, 227, 210, 0.18),
+    0 0 6px rgba(126, 227, 210, 0.35);
+}
+.glyph-picker__current {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.glyph-picker__current-symbol {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-style: normal;
+  color: var(--instrument-fluor);
+  text-shadow: 0 0 4px rgba(126, 227, 210, 0.4);
+  line-height: 1;
+  width: 32px;
+  text-align: center;
+}
+.glyph-picker__current-name {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--bone-2);
+  text-transform: none;
+}
+
+/* Between-barriers picker — two selects + swap button between them */
+.between-picker {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.between-picker__swap {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  color: var(--bone-dim);
+  font-family: var(--mono);
+  font-size: 13px;
+  width: 22px; height: 22px;
+  cursor: pointer;
+  padding: 0;
+  display: grid; place-items: center;
+  transition: background 100ms ease, color 100ms ease, border-color 120ms ease;
+}
+.between-picker__swap:hover {
+  background: var(--ink-3);
+  color: var(--brass-bright);
+  border-color: var(--brass-deep);
+}
+
+/* Hatching preview swatch — a small SVG rectangle showing the diagonal
+   stripes + glyph(s) the buffer zone will render. Updates live as the
+   hatching/glyph fields change. */
+.hatching-swatch {
+  display: block;
+  width: 100%;
+  height: 56px;
+  background: var(--ink);
+  border: 1px solid var(--rule-2);
+  margin-top: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.hatching-swatch__caption {
+  position: absolute;
+  bottom: 4px;
+  left: 8px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+
+/* ============================================================
+   Ship 5 — Contamination editor primitives
+   ============================================================ */
+
+/* Action button (inspector) — used for FETCH SOURCES.
+   Visually distinct from PICK (teal) — uses plague-purple. */
+.action-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--plague-purple);
+  color: var(--plague-purple);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  cursor: pointer;
+  margin: 8px 0 4px;
+  transition: background 100ms ease, color 100ms ease, border-color 120ms ease;
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.action-btn:hover {
+  background: rgba(107, 58, 130, 0.18);
+  color: #b07ad0;
+  border-color: #9a5cb8;
+}
+.action-btn:active { transform: translateY(1px); }
+.action-btn[disabled] {
+  opacity: 0.4;
+  cursor: wait;
+  border-color: var(--rule-2);
+  color: var(--bone-faint);
+}
+.action-btn .badge {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  background: var(--ink);
+  border: 1px solid currentColor;
+  padding: 2px 6px;
+  border-radius: 0;
+  color: inherit;
+}
+.action-btn.is-loading {
+  background: linear-gradient(90deg,
+    transparent 0%, transparent 30%,
+    rgba(107, 58, 130, 0.25) 45%,
+    rgba(107, 58, 130, 0.45) 50%,
+    rgba(107, 58, 130, 0.25) 55%,
+    transparent 70%, transparent 100%);
+  background-size: 200% 100%;
+  animation: action-shimmer 1.4s linear infinite;
+}
+@keyframes action-shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Source dots on canvas — fetched OSM nodes for contamination sources */
+.contam-source-dot {
+  fill: var(--plague-purple);
+  stroke: rgba(220, 180, 240, 0.9);
+  stroke-width: 0.8;
+  filter: drop-shadow(0 0 2.5px rgba(107, 58, 130, 0.7));
+  /* Stagger reveal animation set per-element via inline transition-delay */
+  opacity: 0;
+  transform-origin: center;
+  transform: scale(0.4);
+  transition: opacity 240ms ease-out, transform 240ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.contam-source-dot.is-revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+/* Weighting line — thin tether from each source to the epicenter,
+   colored by computed weight (brighter = stronger contribution). */
+.contam-weighting-line {
+  stroke-linecap: round;
+  fill: none;
+  pointer-events: none;
+}
+
+/* Inspector tabs — used by contamination's multi-section config */
+.inspector-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink);
+  margin: 0 -18px 14px;
+}
+.inspector-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--rule);
+  color: var(--bone-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 10px 6px;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  transition: color 100ms ease, background 100ms ease;
+}
+.inspector-tab:last-child { border-right: 0; }
+.inspector-tab:hover { color: var(--bone-2); }
+.inspector-tab.is-active {
+  color: var(--plague-purple);
+  background: var(--ink-2);
+}
+.inspector-tab.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px; left: 8px; right: 8px;
+  height: 2px;
+  background: var(--plague-purple);
+}
+
+/* Octave list — for edge_noise tab */
+.octave-list {
+  display: grid; gap: 4px;
+  margin-top: 4px;
+}
+.octave-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 6px;
+  background: var(--ink);
+  border: 1px solid var(--rule);
+}
+.octave-row__idx {
+  color: var(--bone-faint);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+.octave-row__remove {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  color: var(--bone-dim);
+  font-family: var(--mono);
+  font-size: 12px;
+  width: 18px; height: 18px;
+  cursor: pointer;
+  padding: 0;
+  display: grid; place-items: center;
+}
+.octave-row__remove:hover {
+  border-color: var(--hazard-crimson);
+  color: var(--hazard-crimson);
+}
+
+/* Pick button (in inspector field-card) — small tag-like trigger */
+.pick-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--instrument-fluor);
+  color: var(--instrument-fluor);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background 100ms ease, color 100ms ease;
+  flex: none;
+}
+.pick-btn:hover {
+  background: var(--instrument-fluor);
+  color: var(--ink);
+}
+.pick-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--rule-2);
+  color: var(--bone-faint);
+}
+
+/* ---------- project switcher (matches place.html for parity) ---------- */
+.project-switcher {
+  background: none; border: 1px solid transparent;
+  display: flex; align-items: center; gap: 14px;
+  padding: 4px 10px; cursor: pointer;
+  font-family: var(--mono);
+}
+.project-switcher:hover { border-color: var(--rule-2); }
+.project__caret { color: var(--brass); font-size: 11px; }
+
+</style>
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark">C</span>
+    <span class="brand__name">CARTOGRAPH <em>DRAFT</em></span>
+  </div>
+
+  <nav class="modes" id="modesNav">
+    <a class="mode" data-route="/setup"><span class="mode__num">01</span>Setup</a>
+    <a class="mode" data-route="/paint"><span class="mode__num">02</span>Terrain</a>
+    <a class="mode" data-route="/place"><span class="mode__num">03</span>Places</a>
+    <a class="mode" data-route="/routes"><span class="mode__num">04</span>Routes</a>
+    <a class="mode is-active" data-route="/narrative"><span class="mode__num">05</span>Narrative</a>
+    <a class="mode" data-route="/decoration"><span class="mode__num">06</span>Decoration</a>
+    <span class="modes__sep"></span>
+    <a class="mode" data-route="/render"><span class="mode__num">07</span>Render</a>
+  </nav>
+
+  <div class="project">
+    <div class="build-pill" id="buildPill" data-build="ready">
+      <span class="build-pill__dot"></span>
+      <span class="build-pill__label" id="buildPillLabel">READY</span>
+      <span class="build-pill__stages" id="buildPillStages">
+        <span class="build-pill__stage" data-stage="terrain"></span>
+        <span class="build-pill__stage" data-stage="canvas"></span>
+        <span class="build-pill__stage" data-stage="final"></span>
+      </span>
+      <button class="build-pill__action" id="renderBtn" type="button"
+              title="Render to populate the map preview"
+              >RENDER</button>
+    </div>
+    <button class="project-switcher" id="projectSwitcher">
+      <span class="project__meta" id="projectMeta"><b>—</b> · loading…</span>
+      <span class="project__name" id="projectName">—</span>
+      <span class="project__caret">▾</span>
+    </button>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- ===== Left rail: layer list ===== -->
+  <aside class="rail rail--left">
+    <div class="rail__head">
+      <h3>Narrative Layers</h3>
+      <span class="count" id="layerCount">—</span>
+    </div>
+    <ul class="layers" id="layerList"></ul>
+  </aside>
+
+  <!-- ===== Center: canvas preview with SVG overlay ===== -->
+  <main class="canvas-pane">
+    <div class="canvas-bar">
+      <span class="canvas-bar__title">Survey</span>
+      <span class="canvas-bar__divider"></span>
+      <span class="canvas-bar__readout" id="readoutBounds">awaiting bounds…</span>
+      <span class="canvas-bar__divider"></span>
+      <span class="canvas-bar__readout" id="readoutLayer">no layer selected</span>
+      <span class="canvas-bar__spacer"></span>
+      <span class="canvas-bar__readout"><b>Read-only</b> · ship 1 preview</span>
+    </div>
+    <div class="canvas-stage" id="canvasStage">
+      <div class="canvas-empty" id="canvasEmpty">
+        <span class="canvas-empty__icon">⊡</span>
+        <b>No survey cached</b>
+        <div class="hint">
+          The Narrative page reads cached stage previews to draft barriers,
+          buffer zones, and contamination without re-rendering the full
+          parchment. Render the map once to populate the cache, then return
+          here to begin.<br><br>
+          <button id="emptyStateRenderBtn" type="button">
+            Render this map →
+          </button>
+          <a href="/render">open render step</a>
+        </div>
+      </div>
+      <div class="canvas-frame" id="canvasFrame" hidden>
+        <img id="canvasImg" alt="map preview" />
+        <!-- Matte covers the cached preview during pick mode. The road
+             bloom SVG sits ON TOP of the matte at higher z-index. -->
+        <div class="canvas-matte" id="canvasMatte"></div>
+        <!-- Road bloom SVG: separate from the main overlay so we can
+             toggle pick-mode by adding/removing a class on .canvas-stage,
+             which CSS turns into the dashoffset reveal animation. -->
+        <svg class="overlay" id="roadBloomSvg" preserveAspectRatio="none"
+             style="z-index:5; pointer-events:none"></svg>
+        <svg class="overlay" id="overlaySvg" preserveAspectRatio="none"
+             style="z-index:7"></svg>
+        <!-- Pick-mode banner (top-of-canvas anchor) -->
+        <div class="pickmode-banner" id="pickModeBanner" hidden>
+          <div class="pickmode-banner__strip"></div>
+          <div class="pickmode-banner__label" id="pickModeLabel">EAST</div>
+          <div class="pickmode-banner__prompt" id="pickModePrompt">
+            <span id="pickModePromptText">Click a road to set position</span>
+            <span class="pickmode-banner__prompt-snap" id="pickModeSnapInfo"></span>
+          </div>
+          <button class="pickmode-banner__esc" id="pickModeEsc"
+                  type="button" title="Cancel pick (Esc)">
+            <kbd>ESC</kbd> <span>cancel</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Coordinate readout that follows the cursor — outside .canvas-stage
+         so its position: fixed isn't constrained. -->
+    <div class="pickmode-cursor-readout" id="cursorReadout"></div>
+  </main>
+
+  <!-- ===== Right rail: inspector ===== -->
+  <aside class="rail rail--right inspector">
+    <div class="save-status" id="saveStatus" data-state="idle">
+      <span class="save-status__dot"></span>
+      <span class="save-status__text" id="saveStatusText">Idle</span>
+      <span class="save-status__detail" id="saveStatusDetail"></span>
+    </div>
+    <div class="inspector__head">
+      <span class="inspector__eyebrow" id="insEyebrow">Layer · None</span>
+      <h2 class="inspector__title" id="insTitle">Nothing selected</h2>
+      <p class="inspector__lead" id="insLead">
+        Click a layer in the left rail to inspect its configuration.
+        Edits to simple fields persist automatically as you type.
+      </p>
+    </div>
+    <div class="inspector__body" id="insBody">
+      <div class="inspector__empty">
+        <span class="glyph">∅</span>
+        Select a layer to begin
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<footer class="botbar">
+  <span>NARRATIVE / SURVEY · ship <b>01</b> · read-only foundation</span>
+  <span>
+    <a href="/render">→ render</a> ·
+    <a href="/decoration">decoration</a> ·
+    <a href="/routes">routes</a>
+  </span>
+</footer>
+
+<div class="grain"></div>
+
+<script src="/_shared.js"></script>
+<script>
+"use strict";
+
+// ============================================================
+//  Project switcher (minimal — full version in place.html)
+// ============================================================
+const STATE = {
+  project: null,         // string config name
+  cfg:     null,         // parsed YAML config
+  info:    null,         // /api/render-info response
+  paths:   null,         // /api/barrier-paths response
+  preview: null,         // {url, w, h}
+  selectedLayerId: null, // identifier of the layer selected in the rail
+};
+
+function qs(sel) { return document.querySelector(sel); }
+
+async function loadInitial() {
+  const params = new URLSearchParams(location.search);
+  let project = params.get("project");
+  if (!project) {
+    const list = await fetch("/api/configs").then(r => r.json()).catch(() => []);
+    project = list[0];
+  }
+  if (!project) {
+    qs("#projectName").textContent = "(no configs)";
+    qs("#projectMeta").innerHTML = "<b>—</b> · empty";
+    return;
+  }
+  STATE.project = project;
+  qs("#projectName").textContent = project;
+  qs("#projectMeta").innerHTML = "<b>" + project + "</b> · loading…";
+
+  // Fetch in parallel
+  const [cfg, info, preview] = await Promise.all([
+    fetch("/api/config/" + project).then(r => r.ok ? r.json() : null),
+    fetch("/api/render-info/" + project).then(r => r.ok ? r.json() : null),
+    fetch("/api/stage-preview/" + project + "/canvas").then(r => r.ok ? r.json() : null)
+      .catch(() => null),
+  ]);
+  STATE.cfg = cfg;
+  STATE.info = info;
+  STATE.preview = preview;
+
+  // Barrier paths — only fetch if we have a render. This call is server-
+  // side cached on the OSM road graph + the existing barrier_paths cache,
+  // so on a hot config it's quick (~200ms). On a cold config, it can take
+  // several seconds (full A*). We fire-and-forget, then re-render.
+  if (info) {
+    fetch("/api/barrier-paths/" + project)
+      .then(r => r.ok ? r.json() : null)
+      .then(p => { STATE.paths = p; render(); })
+      .catch(() => null);
+  }
+
+  qs("#projectMeta").innerHTML = "<b>" + project + "</b> · narrative";
+  if (info) {
+    const b = info.bounds || {};
+    qs("#readoutBounds").innerHTML =
+      "<b>" + (info.canvas_w || 0) + "×" + (info.canvas_h || 0) + "</b>" +
+      " · " + (b.lat_s || 0).toFixed(2) + "° to " + (b.lat_n || 0).toFixed(2) + "° N" +
+      " · " + (b.lon_w || 0).toFixed(2) + "° to " + (b.lon_e || 0).toFixed(2) + "° E";
+  }
+  render();
+
+  // Wire the ESC pill (one-time)
+  const esc = qs("#pickModeEsc");
+  if (esc && !esc.dataset.wired) {
+    esc.dataset.wired = "1";
+    esc.addEventListener("click", () => {
+      esc.classList.add("is-pressed");
+      setTimeout(() => esc.classList.remove("is-pressed"), 220);
+      cancelPickMode();
+    });
+  }
+
+  // Pre-load roads in the background so the first PICK click engages
+  // pick-mode instantly (without waiting for the ~2s roads-vector fetch).
+  if (info) ensureRoadsLoaded();
+
+  // Wire build-pill render button + empty-state render button (one-time).
+  wireRenderBtn();
+  wireEmptyStateRender();
+
+  // Initial pill state — if we have a render cache, we're "ready"; if
+  // not, the empty state and the dirty-style pill nudge the user to
+  // render. The save-status MutationObserver takes over once edits begin.
+  if (info) {
+    setBuildState("ready", "READY", { stages: [] });
+  } else {
+    setBuildState("stale", "NO RENDER",
+      { stages: ["terrain", "canvas", "final"] });
+  }
+
+  // Initialize shared History module. Narrative.html keeps its own
+  // local debounced auto-save (see SAVE/commitSave above) — the shared
+  // Save module is intentionally NOT initialized here to avoid two
+  // overlapping save state machines fighting over the same #saveStatus
+  // DOM. History pushes a snapshot after each successful commitSave.
+  if (window.Cartograph && Cartograph.History && STATE.cfg) {
+    const getCfg = () => STATE.cfg;
+    const applyCfg = (cfg) => {
+      STATE.cfg = cfg;
+      render();
+      // Re-mark dirty so the next idle tick re-PUTs the restored cfg.
+      // (Without this, the server keeps the post-edit version while the
+      // UI shows the undo result — confusing on reload.)
+      markDirty();
+    };
+    Cartograph.History.init({ getCfg, applyCfg });
+  }
+}
+
+// ============================================================
+//  Layer model — derived from STATE.cfg
+// ============================================================
+
+// Each "layer" is a logical narrative element. Multiple barriers each
+// get their own layer row; sinking / buffer / contamination / tints are
+// singletons that show as one row each (or a section with sub-rows for
+// constraints).
+function deriveLayers() {
+  const cfg = STATE.cfg || {};
+  const layers = [];
+
+  // --- Sinking ---
+  const sink = cfg.sinking || {};
+  layers.push({
+    id: "sinking",
+    section: "Hydrology",
+    glyph: "≈",
+    name: "Submerged region",
+    sub: sink.region ? sink.region : (sink.enabled ? "configured" : "off"),
+    accent: "var(--hazard-cyan)",
+    status: sink.enabled
+      ? { text: "ACTIVE", cls: "ok" }
+      : { text: "OFF", cls: "off" },
+    type: "sinking",
+    cfg: sink,
+  });
+
+  // --- Barriers (one row per) ---
+  const barriers = cfg.barriers || [];
+  barriers.forEach((b, i) => {
+    const isOffset = b.method === "astar_offset";
+    layers.push({
+      id: "barrier:" + (b.name || i),
+      section: "Boundary works",
+      glyph: isOffset ? "┄" : "━",
+      name: b.name || ("barrier " + (i + 1)),
+      sub: (b.type || "wall") + " · " + (b.method || "astar_road_network").replace("astar_", "A* "),
+      accent: stylColorRGB(b.style),
+      status: { text: isOffset ? "OFFSET" : "PATH", cls: "ok" },
+      type: "barrier",
+      cfg: b,
+    });
+  });
+
+  // --- Buffer zone ---
+  const bz = cfg.buffer_zone || {};
+  if (Object.keys(bz).length) {
+    const between = bz.between || [];
+    const ok = bz.enabled && between.length === 2;
+    layers.push({
+      id: "buffer",
+      section: "Boundary works",
+      glyph: "▦",
+      name: "Buffer zone",
+      sub: between.length ? between.join(" ⇄ ") : "(unset)",
+      accent: "var(--hazard-amber)",
+      status: ok
+        ? { text: "ACTIVE", cls: "ok" }
+        : (bz.enabled ? { text: "INVALID", cls: "warn" } : { text: "OFF", cls: "off" }),
+      type: "buffer",
+      cfg: bz,
+    });
+  }
+
+  // --- Contamination ---
+  const ct = cfg.contamination || {};
+  if (Object.keys(ct).length) {
+    layers.push({
+      id: "contamination",
+      section: "Hazard fields",
+      glyph: "☣",
+      name: ct.name || "Contamination",
+      sub: (ct.method || "—") + " · " + ((ct.spread || {}).max_distance || 0) + " cells",
+      accent: "var(--plague-purple)",
+      status: ct.enabled
+        ? { text: "ACTIVE", cls: "ok" }
+        : { text: "OFF", cls: "off" },
+      type: "contamination",
+      cfg: ct,
+    });
+  }
+
+  // --- Tint constraints (computed from regions[].tint config). Includes
+  // both legacy single-string (`constraint:`) and compound list
+  // (`constraints: [...]`) forms; either qualifies the region for
+  // inclusion in the rail summary.
+  const constraints = (cfg.regions || []).filter(r => {
+    const t = r.tint || {};
+    if (t.type === "band") return true;
+    if (typeof t.constraint === "string" && t.constraint) return true;
+    if (Array.isArray(t.constraints) &&
+        t.constraints.some(c => typeof c === "string" && c)) return true;
+    return false;
+  });
+  if (constraints.length) {
+    constraints.forEach((r) => {
+      const t = r.tint || {};
+      const isBand = t.type === "band";
+      const between = isBand ? (t.between || []).join(" ⇄ ") : null;
+      // Build a sub-caption that signals legacy vs compound
+      let sub;
+      if (isBand) {
+        sub = "band: " + between;
+      } else {
+        const items = [];
+        if (t.constraint) items.push(t.constraint);
+        if (Array.isArray(t.constraints)) {
+          for (const c of t.constraints) {
+            if (typeof c === "string" && c) items.push(c);
+          }
+        }
+        if (items.length === 1) {
+          sub = items[0];
+        } else {
+          const logic = (t.constraint_logic || "and").toUpperCase();
+          sub = `${logic} of ${items.length}: ` +
+            items.map(s => s.replace("_of_", " ")).join(" · ");
+        }
+      }
+      const status = isBand ? "BAND"
+                            : (t.constraints ? "COMPOUND" : "CLIPPED");
+      layers.push({
+        id: "constraint:" + (r.name || ""),
+        section: "Tint constraints",
+        glyph: isBand ? "≡" : "⊥",
+        name: r.name || "(unnamed)",
+        sub,
+        accent: rgbFromAdj(t.adjustments) || "var(--brass)",
+        status: { text: status, cls: "ok" },
+        type: "constraint",
+        cfg: r,
+      });
+    });
+  }
+
+  return layers;
+}
+
+function stylColorRGB(style) {
+  if (!style || !style.color) return "var(--brass)";
+  const c = style.color;
+  if (Array.isArray(c) && c.length >= 3) {
+    return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")";
+  }
+  return "var(--brass)";
+}
+
+function rgbFromAdj(adj) {
+  if (!adj) return null;
+  // Project the (r, g, b) deltas onto a swatch tone — biased toward
+  // the dominant channel sign. Used for the layer-row accent color.
+  const r = (adj.r || 0), g = (adj.g || 0), b = (adj.b || 0);
+  const base = 140;
+  const R = Math.max(40, Math.min(240, base + r * 600));
+  const G = Math.max(40, Math.min(240, base + g * 600));
+  const B = Math.max(40, Math.min(240, base + b * 600));
+  return "rgb(" + Math.round(R) + "," + Math.round(G) + "," + Math.round(B) + ")";
+}
+
+// ============================================================
+//  Render
+// ============================================================
+function render() {
+  renderRail();
+  renderInspector();
+  renderCanvas();
+}
+
+function renderRail() {
+  const list = qs("#layerList");
+  list.innerHTML = "";
+  const layers = deriveLayers();
+  qs("#layerCount").textContent = layers.length + " entries";
+
+  // Group by section
+  const sections = new Map();
+  for (const lyr of layers) {
+    if (!sections.has(lyr.section)) sections.set(lyr.section, []);
+    sections.get(lyr.section).push(lyr);
+  }
+
+  for (const [sectionName, sectionLayers] of sections) {
+    const head = document.createElement("li");
+    head.className = "layer-section-head";
+    head.textContent = sectionName;
+    list.appendChild(head);
+
+    for (const lyr of sectionLayers) {
+      const row = document.createElement("li");
+      row.className = "layer-row" +
+        (STATE.selectedLayerId === lyr.id ? " is-active" : "") +
+        (lyr.status.cls === "off" ? " is-disabled" : "");
+      row.style.setProperty("--accent", lyr.accent);
+
+      const glyph = document.createElement("span");
+      glyph.className = "layer-glyph";
+      glyph.textContent = lyr.glyph;
+
+      const name = document.createElement("div");
+      name.innerHTML = '<div class="layer-name">' + escapeHtml(lyr.name) +
+        '</div><div class="layer-name__sub">' + escapeHtml(lyr.sub || "") + '</div>';
+
+      const status = document.createElement("span");
+      status.className = "layer-status " + lyr.status.cls;
+      status.textContent = lyr.status.text;
+
+      row.appendChild(glyph); row.appendChild(name); row.appendChild(status);
+      row.addEventListener("click", () => {
+        STATE.selectedLayerId = lyr.id;
+        render();
+      });
+      list.appendChild(row);
+    }
+  }
+
+  if (!layers.length) {
+    const empty = document.createElement("li");
+    empty.className = "layer-row";
+    empty.style.opacity = "0.5";
+    empty.innerHTML =
+      '<span class="layer-glyph">∅</span>' +
+      '<div><div class="layer-name">No narrative layers</div>' +
+      '<div class="layer-name__sub">configure in YAML or upcoming editor</div></div>' +
+      '<span class="layer-status off">EMPTY</span>';
+    list.appendChild(empty);
+  }
+}
+
+function renderInspector() {
+  const layers = deriveLayers();
+  const lyr = layers.find(l => l.id === STATE.selectedLayerId);
+  const head = qs(".inspector__head");
+  const body = qs("#insBody");
+
+  if (!lyr) {
+    qs("#insEyebrow").textContent = "Layer · None";
+    qs("#insTitle").textContent = "Nothing selected";
+    qs("#insLead").textContent =
+      "Click a layer in the left rail to inspect its configuration. " +
+      "Editing is coming in the next ship — for now this view is read-only.";
+    body.innerHTML = '<div class="inspector__empty"><span class="glyph">∅</span>Select a layer to begin</div>';
+    head.style.setProperty("--accent", "var(--bone-faint)");
+    qs("#readoutLayer").textContent = "no layer selected";
+    return;
+  }
+
+  head.style.setProperty("--accent", lyr.accent);
+  qs("#insEyebrow").textContent = "Layer · " + lyr.section;
+  qs("#insTitle").textContent = lyr.name;
+  qs("#insLead").textContent = describeLayer(lyr);
+  qs("#readoutLayer").innerHTML =
+    "Inspecting <b>" + escapeHtml(lyr.name) + "</b> · " + lyr.section.toLowerCase();
+
+  // Reset binding registry — every inspector render starts fresh.
+  __editBindings.length = 0;
+  body.innerHTML = inspectorBody(lyr);
+  wireEditableInputs();
+}
+
+function describeLayer(lyr) {
+  switch (lyr.type) {
+    case "sinking":
+      return "Floods a polygon (named state or GeoJSON file) into the water mask " +
+             "before stage 2. Treats the region as ocean: hillshade, palette, and " +
+             "coastline darken all apply automatically.";
+    case "barrier":
+      if (lyr.cfg.method === "astar_offset")
+        return "Tracks an existing barrier in parallel through the road network. " +
+               "Uses the offset target curve as an attractor; deviation penalties " +
+               "shape how strictly the path adheres.";
+      return "A* shortest path through the OSM road graph between two named " +
+             "endpoints. Snaps endpoints to the largest connected component, " +
+             "extends termini to shore-water via tangent walk + BFS.";
+    case "buffer":
+      return "Polygonal corridor between two named barriers. Renders as " +
+             "diagonal hatching with optional periodic glyphs (biohazard, etc.) " +
+             "stamped along the centerline.";
+    case "contamination":
+      return "Multi-source intensity field that spreads from OSM nodes through " +
+             "land cells. Blocked by water and named barriers via flood-fill " +
+             "topology. Rendered as a colored overlay with multi-octave edge noise.";
+    case "constraint":
+      const t = (lyr.cfg.tint || {});
+      if (t.type === "band")
+        return "This region's tint is bounded by the polygon between two named " +
+               "barriers. Behaves identically to the buffer-zone geometry but " +
+               "applies as a stage-2 RGB tint rather than a stage-4 overlay.";
+      return "This region's tint mask is multiplied by a half-plane derived " +
+             "from a barrier (e.g. \"north_of_wall\"). The tint only applies on " +
+             "the configured side of the barrier.";
+    default:
+      return "";
+  }
+}
+
+function inspectorBody(lyr) {
+  switch (lyr.type) {
+    case "sinking":      return inspectSinking(lyr);
+    case "barrier":      return inspectBarrier(lyr);
+    case "buffer":       return inspectBuffer(lyr);
+    case "contamination":return inspectContamination(lyr);
+    case "constraint":   return inspectConstraint(lyr);
+    default:             return "";
+  }
+}
+
+function inspectSinking(lyr) {
+  // Sinking is a single-instance config under cfg.sinking.
+  // Ensure the path exists so binding can write to it.
+  if (!STATE.cfg.sinking) STATE.cfg.sinking = {};
+  const c = lyr.cfg || {};
+  const enabled = !!c.enabled;
+  return [
+    card("State", [
+      editPair("Enabled", inputToggle("sinking.enabled")),
+      editPair("Method", inputSelect("sinking.method", ["nan_mask"])),
+    ]),
+    card("Region source", [
+      editPair("Region", inputText("sinking.region", { placeholder: "Virginia" })),
+      editPair("Source file", inputText("sinking.source",
+        { placeholder: "(blank → admin lookup)" })),
+    ]),
+    notice(enabled
+      ? "Region polygon is unioned into the water mask before stage 2. Re-render to apply."
+      : "Disabled. Toggle Enabled above to flood a region."),
+  ].join("");
+}
+
+function inspectBarrier(lyr) {
+  const b = lyr.cfg || {};
+  const ep = b.endpoints || {};
+  const corr = b.corridor || {};
+  const style = b.style || {};
+  const label = b.label || {};
+  const isOffset = b.method === "astar_offset";
+
+  // Find the array index for path-based binding.
+  const barriers = STATE.cfg.barriers || [];
+  const idx = barriers.findIndex(x => x === b);
+  const root = "barriers[" + idx + "]";
+
+  // Ensure sub-objects exist before binding (so set-by-path doesn't fail).
+  if (!b.style) b.style = {};
+  if (!b.label) b.label = {};
+
+  // Lookup the computed path (if API has returned)
+  const computed = (STATE.paths && STATE.paths.barriers || []).find(
+    bp => bp.name === b.name);
+  const length = computed ? computed.length_km : null;
+  const npts   = computed ? (computed.path || []).length : null;
+
+  const sections = [];
+
+  // ---- Identity (editable) ----
+  sections.push(card("Identity", [
+    editPair("Name", inputText(root + ".name")),
+    editPair("Type", inputText(root + ".type", { placeholder: "wall" })),
+    pair("Method", isOffset ? "A* offset" : "A* road network"),
+  ], length != null ? formatKm(length) : null));
+
+  // ---- Geometry ----
+  if (isOffset) {
+    // Build dropdown of barriers eligible to be the reference
+    // (everything that's NOT this barrier — to avoid self-reference).
+    const otherBarriers = barriers
+      .filter(other => other !== b && other.name)
+      .map(other => other.name);
+    sections.push(card("Offset geometry", [
+      editPair("Reference",
+        inputSelect(root + ".reference_barrier", otherBarriers,
+                    { placeholder: "(unset)" })),
+      editPair("Direction",
+        inputSelect(root + ".direction",
+                    ["north", "south", "east", "west"])),
+      editPair("Offset (°)",
+        inputNumber(root + ".offset_degrees",
+                    { step: 0.01, min: 0, max: 5, small: true })),
+    ]));
+    // Editable deviation tolerances. Adjustments here update the
+    // visualization instantly (max_deviation tightens the band);
+    // the actual A* path only re-runs on Compute Path button.
+    sections.push(card("Deviation tolerances · live preview", [
+      editPair("Per-degree penalty",
+        inputNumber(root + ".corridor.deviation_penalty",
+                    { step: 1000, min: 0, max: 1000000, small: true })),
+      editPair("Max deviation (°)",
+        inputNumber(root + ".corridor.max_deviation",
+                    { step: 0.01, min: 0, max: 1, small: true })),
+      editPair("Past-max penalty",
+        inputNumber(root + ".corridor.max_deviation_penalty",
+                    { step: 1000, min: 0, max: 1000000, small: true })),
+      editPair("Wrong-side penalty",
+        inputNumber(root + ".corridor.south_hard_penalty",
+                    { step: 1000, min: 0, max: 1000000, small: true })),
+    ]) +
+    // The Compute Path action re-runs A* with current corridor settings.
+    // Keeps slider feedback responsive (band updates client-side) while
+    // committing the user to an explicit "I want the new path" gesture
+    // before the ~5-8s A* recompute fires.
+    '<button class="action-btn" type="button" id="computeOffsetBtn" ' +
+      'data-barrier-idx="' + idx + '">' +
+    '<span>Compute path</span>' +
+    '<span class="badge" id="computeOffsetBadge"></span>' +
+    '</button>');
+  } else {
+    // Endpoint card: each row has a PICK button that engages pick-mode
+    // for just that endpoint (scope = "east" | "west"). A third row
+    // offers "PICK BOTH" to chain through East then West.
+    const pickEastBtn = '<button class="pick-btn" type="button" ' +
+      'data-pick-barrier="' + idx + '" data-pick-scope="east">PICK</button>';
+    const pickWestBtn = '<button class="pick-btn" type="button" ' +
+      'data-pick-barrier="' + idx + '" data-pick-scope="west">PICK</button>';
+    const pickBothBtn = '<button class="pick-btn" type="button" ' +
+      'data-pick-barrier="' + idx + '" data-pick-scope="both">PICK BOTH ON MAP →</button>';
+    const eastTxt = ep.east
+      ? formatLatLon(ep.east.lat, ep.east.lon)
+      : '<span class="neutral">(unset)</span>';
+    const westTxt = ep.west
+      ? formatLatLon(ep.west.lat, ep.west.lon)
+      : '<span class="neutral">(unset)</span>';
+    sections.push(card("Endpoints", [
+      pair("East", '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="flex:1">' + eastTxt + '</span>' + pickEastBtn + '</div>'),
+      pair("West", '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="flex:1">' + westTxt + '</span>' + pickWestBtn + '</div>'),
+      pair("Both",
+        '<div style="text-align:right">' + pickBothBtn + '</div>'),
+    ]));
+    sections.push(card("Corridor — read-only", [
+      pair("Lat band",
+        (corr.lat_min != null ? corr.lat_min.toFixed(3) : "—") + " → " +
+        (corr.lat_max != null ? corr.lat_max.toFixed(3) : "—") + "°"),
+      pair("Penalty", fmtNum(corr.penalty)),
+      pair("Roads", (b.road_types || []).slice(0, 4).join(", ") +
+        ((b.road_types || []).length > 4 ? ", …" : "")),
+    ]));
+  }
+
+  // ---- Style (editable) ----
+  sections.push(card("Style", [
+    editPair("Color", inputColor(root + ".style.color")),
+    editPair("Width", inputNumber(root + ".style.width", { step: 1, min: 1, small: true })),
+    editPair("Shadow width", inputNumber(root + ".style.shadow_width", { step: 1, min: 0, small: true })),
+    editPair("Hash marks", inputToggle(root + ".style.hash_marks")),
+  ]));
+
+  if (style.hash_marks) {
+    sections.push(card("Hash mark detail", [
+      editPair("Length", inputNumber(root + ".style.hash_length", { step: 1, min: 1, small: true })),
+      editPair("Spacing", inputNumber(root + ".style.hash_spacing", { step: 1, min: 1, small: true })),
+    ]));
+  }
+
+  sections.push(card(isOffset ? "Dash pattern" : "Dashing", [
+    editPair("Dashed", inputToggle(root + ".style.dashed")),
+    ...(style.dashed ? [
+      editPair("Dash length",
+        inputNumber(root + ".style.dash_length", { step: 1, min: 1, small: true })),
+    ] : []),
+  ]));
+
+  // ---- Label (editable) ----
+  sections.push(card("Label", [
+    editPair("Text", inputText(root + ".label.text", { placeholder: "(blank = no label)" })),
+    editPair("Position", inputSelect(root + ".label.position",
+      ["start", "midpoint", "three_quarter", "end"])),
+    editPair("Offset", inputOffset(root + ".label.offset")),
+    editPair("Color", inputColor(root + ".label.color")),
+    editPair("Font role", inputText(root + ".label.font", { placeholder: "settle" })),
+  ]));
+
+  if (computed) {
+    sections.push(strata("computed geometry"));
+    sections.push(card("A* result", [
+      pair("Points", npts != null ? npts.toLocaleString() : "—"),
+      pair("Length", length != null ? formatKm(length) : "—"),
+    ]));
+  }
+
+  return sections.join("");
+}
+
+function inspectBuffer(lyr) {
+  // Buffer zone is single-instance under cfg.buffer_zone. Ensure paths
+  // exist so binding can write to them without erroring.
+  if (!STATE.cfg.buffer_zone) STATE.cfg.buffer_zone = {};
+  if (!STATE.cfg.buffer_zone.between)
+    STATE.cfg.buffer_zone.between = [null, null];
+  if (!STATE.cfg.buffer_zone.hatching) STATE.cfg.buffer_zone.hatching = {};
+  if (!STATE.cfg.buffer_zone.symbols) STATE.cfg.buffer_zone.symbols = {};
+
+  const c = lyr.cfg || {};
+  const between = c.between || [];
+  const hatch = c.hatching || {};
+  const sym = c.symbols || {};
+  const sections = [];
+
+  // ---- Enabled toggle + barriers it spans ----
+  sections.push(card("State", [
+    editPair("Enabled", inputToggle("buffer_zone.enabled")),
+  ]));
+
+  sections.push(card("Between barriers", [
+    editPair("Pair", inputBetween("buffer_zone.between", between)),
+  ]));
+
+  // Validation: warn if either select is unset
+  const a = between[0], b = between[1];
+  const valid = a && b && a !== b;
+  if (!valid) {
+    sections.push(notice(
+      a === b && a
+        ? "⚠ Both bounds reference the same barrier — buffer would have no area."
+        : "Configure both bounds (above) to render the buffer polygon. " +
+          "Available barriers come from step 05 / Boundary works."));
+  }
+
+  // ---- Hatching ----
+  sections.push(card("Hatching", [
+    editPair("Color", inputColor("buffer_zone.hatching.color")),
+    editPair("Spacing", inputNumber("buffer_zone.hatching.spacing",
+      { step: 1, min: 2, max: 80, small: true })),
+    editPair("Direction", inputSelect("buffer_zone.hatching.direction",
+      ["diagonal", "horizontal", "vertical"])),
+  ]) + hatchingSwatch("buffer_zone.hatching", "buffer_zone.symbols.character"));
+
+  // ---- Glyphs (the interesting widget) ----
+  sections.push(card("Glyphs · sprinkled along centerline", [
+    editPair("Symbol", inputGlyphPicker("buffer_zone.symbols.character")),
+    editPair("Count", inputNumber("buffer_zone.symbols.count",
+      { step: 1, min: 1, max: 64, small: true })),
+    editPair("Font size",
+      inputNumber("buffer_zone.symbols.font_size",
+        { step: 1, min: 8, max: 64, small: true })),
+    editPair("Color", inputColor("buffer_zone.symbols.color")),
+  ]));
+
+  // Optional placement metadata (read-only — band tints would re-derive)
+  sections.push(card("Geometry — read-only", [
+    pair("Polygon points",
+      (STATE.paths && STATE.paths.buffer_zone &&
+        STATE.paths.buffer_zone.polygon)
+        ? STATE.paths.buffer_zone.polygon.length.toLocaleString()
+        : '<span class="neutral">— rendered after barriers compute</span>'),
+    pair("Centerline",
+      sym && sym.count
+        ? "sampled at " + sym.count + " positions"
+        : '<span class="neutral">no glyphs configured</span>'),
+  ]));
+
+  return sections.join("");
+}
+
+// Persistent UI state for contamination inspector — which tab is open.
+let __contamTab = "sources";
+
+function inspectContamination(lyr) {
+  // Ensure cfg paths exist so binding writes don't throw on undefined.
+  if (!STATE.cfg.contamination) STATE.cfg.contamination = {};
+  if (!STATE.cfg.contamination.sources) STATE.cfg.contamination.sources = {};
+  if (!STATE.cfg.contamination.sources.epicenter)
+    STATE.cfg.contamination.sources.epicenter = {};
+  if (!STATE.cfg.contamination.spread) STATE.cfg.contamination.spread = {};
+  if (!STATE.cfg.contamination.overlay) STATE.cfg.contamination.overlay = {};
+  if (!STATE.cfg.contamination.edge_noise)
+    STATE.cfg.contamination.edge_noise = {};
+
+  const c = lyr.cfg || {};
+  const src = c.sources || {};
+  const sp = c.spread || {};
+  const ov = c.overlay || {};
+  const en = c.edge_noise || {};
+
+  const sections = [];
+
+  // ---- Always-visible Identity card ----
+  sections.push(card("Identity", [
+    editPair("Enabled", inputToggle("contamination.enabled")),
+    editPair("Name", inputText("contamination.name")),
+  ]));
+
+  // ---- Tab strip ----
+  const tabs = ["sources", "spread", "overlay", "edge_noise"];
+  const tabLabels = {
+    sources: "Sources",
+    spread: "Spread",
+    overlay: "Overlay",
+    edge_noise: "Edge noise",
+  };
+  const tabBar = '<div class="inspector-tabs">' +
+    tabs.map(t => {
+      const active = (t === __contamTab) ? " is-active" : "";
+      return '<button class="inspector-tab' + active +
+        '" type="button" data-contam-tab="' + t + '">' +
+        escapeHtml(tabLabels[t]) + '</button>';
+    }).join("") + '</div>';
+  sections.push(tabBar);
+
+  // ---- Sources tab ----
+  if (__contamTab === "sources") {
+    // Source count badge from STATE.contam_sources (populated by FETCH).
+    const cs = STATE.contam_sources;
+    const matched = cs && cs.sources ? cs.sources.length : null;
+    const fetchBadge = matched != null
+      ? '<span class="badge">' + matched + ' MATCHED</span>'
+      : '';
+    sections.push(card("Source query", [
+      editPair("Type", inputSelect("contamination.sources.type",
+        ["osm_query"])),
+      editPair("Query", inputText("contamination.sources.query")),
+    ]) +
+    '<button class="action-btn" type="button" id="fetchSourcesBtn">' +
+    '<span>Fetch sources</span>' + fetchBadge + '</button>');
+
+    sections.push(card("Epicenter (weighting reference)", [
+      editPair("Lat",
+        inputNumber("contamination.sources.epicenter.lat",
+          { step: 0.001, small: true })),
+      editPair("Lon",
+        inputNumber("contamination.sources.epicenter.lon",
+          { step: 0.001, small: true })),
+      editPair("Pick on map",
+        '<button class="pick-btn" type="button" data-pick-epicenter="1">' +
+        'PICK ON MAP →</button>'),
+    ]));
+
+    sections.push(card("Weighting", [
+      editPair("Function", inputSelect("contamination.sources.weighting",
+        ["distance_from_epicenter", "uniform"])),
+      editPair("Weight scale (km)",
+        inputNumber("contamination.sources.weight_scale",
+          { step: 10, min: 1, max: 1000, small: true })),
+    ]));
+  }
+
+  // ---- Spread tab ----
+  if (__contamTab === "spread") {
+    const blocked = sp.blocked_by || [];
+    const barriers = (STATE.cfg.barriers || []).map(b => b.name).filter(Boolean);
+    // Render checkbox list for water + each barrier name
+    const blockerOptions = ["water"].concat(barriers);
+    const blockerCheckboxes = blockerOptions.map(opt => {
+      const checked = blocked.includes(opt) ? "checked" : "";
+      return '<label style="display:flex;align-items:center;gap:8px;' +
+        'padding:4px 0;font-family:var(--mono);font-size:10px;cursor:pointer">' +
+        '<input type="checkbox" ' + checked +
+        ' data-blocker-toggle="' + escapeHtml(opt) + '" />' +
+        '<span>' + escapeHtml(opt) + '</span></label>';
+    }).join("");
+    sections.push(card("Spread parameters", [
+      editPair("Max distance (cells)",
+        inputNumber("contamination.spread.max_distance",
+          { step: 50, min: 100, max: 5000, small: true })),
+      editPair("Blocked by", blockerCheckboxes),
+    ]));
+    if (!blockerOptions.length || blockerOptions.length === 1) {
+      sections.push(notice(
+        "Configure barriers in step 05 / Boundary works to enable " +
+        "barrier-based blocking. Currently only water is available."));
+    }
+  }
+
+  // ---- Overlay tab ----
+  if (__contamTab === "overlay") {
+    sections.push(card("Color overlay (rendered as alpha-composite)", [
+      editPair("R (0–1)",
+        inputNumber("contamination.overlay.color[0]",
+          { step: 0.01, min: 0, max: 1, small: true })),
+      editPair("G (0–1)",
+        inputNumber("contamination.overlay.color[1]",
+          { step: 0.01, min: 0, max: 1, small: true })),
+      editPair("B (0–1)",
+        inputNumber("contamination.overlay.color[2]",
+          { step: 0.01, min: 0, max: 1, small: true })),
+      editPair("Max opacity",
+        inputNumber("contamination.overlay.max_opacity",
+          { step: 0.05, min: 0, max: 1, small: true })),
+      editPair("Noise variation",
+        inputNumber("contamination.overlay.noise_variation",
+          { step: 0.01, min: 0, max: 0.5, small: true })),
+    ]));
+  }
+
+  // ---- Edge noise tab ----
+  if (__contamTab === "edge_noise") {
+    const octaves = en.octaves || [];
+    const octaveRows = octaves.map((o, i) => {
+      const scaleId = bind("number", "contamination.edge_noise.octaves[" + i + "].scale");
+      const wId = bind("number", "contamination.edge_noise.octaves[" + i + "].weight");
+      return '<div class="octave-row">' +
+        '<span class="octave-row__idx">#' + (i + 1) + '</span>' +
+        '<span style="display:flex;align-items:center;gap:6px">' +
+        '<span class="octave-row__idx" style="font-size:8px">SCALE</span>' +
+        '<input class="field-input field-input--small" type="number" ' +
+        'step="1" min="1" max="100" id="' + scaleId + '" ' +
+        'data-path="contamination.edge_noise.octaves[' + i + '].scale" ' +
+        'value="' + (o.scale != null ? o.scale : "") + '" />' +
+        '</span>' +
+        '<span style="display:flex;align-items:center;gap:6px">' +
+        '<span class="octave-row__idx" style="font-size:8px">WEIGHT</span>' +
+        '<input class="field-input field-input--small" type="number" ' +
+        'step="0.05" min="0" max="2" id="' + wId + '" ' +
+        'data-path="contamination.edge_noise.octaves[' + i + '].weight" ' +
+        'value="' + (o.weight != null ? o.weight : "") + '" />' +
+        '</span>' +
+        '<button class="octave-row__remove" type="button" ' +
+        'data-octave-remove="' + i + '" title="remove octave">×</button>' +
+        '</div>';
+    }).join("");
+    sections.push(card("Octaves (multi-scale gaussian noise)", [
+      editPair("Seed", inputNumber("contamination.edge_noise.seed",
+        { step: 1, min: 0, max: 99999, small: true })),
+      pair("Octave list",
+        '<div class="octave-list">' + octaveRows +
+        '<button class="action-btn" type="button" data-octave-add="1" ' +
+        'style="margin-top:8px;padding:4px 10px;font-size:9px;' +
+        'border-color:var(--brass-deep);color:var(--brass);">' +
+        '+ Add octave</button></div>'),
+    ]));
+  }
+
+  return sections.join("");
+}
+
+function inspectConstraint(lyr) {
+  const r = lyr.cfg || {};
+  const t = r.tint || {};
+  const sections = [];
+
+  // Collect all constraint strings (legacy + compound) the same way
+  // collect_constraint_strings does server-side.
+  const constraintStrings = [];
+  if (typeof t.constraint === "string" && t.constraint) {
+    constraintStrings.push(t.constraint);
+  }
+  if (Array.isArray(t.constraints)) {
+    for (const c of t.constraints) {
+      if (typeof c === "string" && c) constraintStrings.push(c);
+    }
+  }
+  let constraintLogic = (t.constraint_logic || "and").toLowerCase();
+  if (constraintLogic !== "and" && constraintLogic !== "or") {
+    constraintLogic = "and";
+  }
+
+  // Resolve each constraint individually so we can show partial failures.
+  const isBand = t.type === "band";
+  const barrierNames = (STATE.cfg.barriers || []).map(b => b.name);
+  const resolveString = (s) => {
+    const parts = (s || "").split("_of_");
+    if (parts.length < 2) return null;
+    const side = parts[0].toUpperCase();
+    const token = (parts[1] || "").toLowerCase();
+    const hit = barrierNames.find(n => (n || "").toLowerCase().includes(token));
+    return { side, token, barrier: hit || null };
+  };
+  const resolutions = constraintStrings.map(s => ({
+    raw: s, ...resolveString(s),
+  }));
+  let resolves = true;
+  let resolveDetail = "";
+  if (isBand) {
+    const between = t.between || [];
+    const missing = between.filter(n => !barrierNames.includes(n));
+    if (missing.length) {
+      resolves = false;
+      resolveDetail = "missing: " + missing.join(", ");
+    }
+  } else if (resolutions.length > 0) {
+    const unresolved = resolutions.filter(r => !r.barrier);
+    if (unresolved.length === resolutions.length) {
+      // All failed — full failure
+      resolves = false;
+      resolveDetail = "no barrier matches: " +
+        unresolved.map(u => u.token || u.raw).join(", ");
+    } else if (unresolved.length > 0) {
+      // Partial — server will silently drop unresolved constraints
+      resolves = false;
+      resolveDetail = "partial: " +
+        unresolved.map(u => u.raw).join(", ") + " unresolved";
+    }
+  }
+
+  sections.push(card("Region", [
+    pair("Name", '<span class="accent">' + escapeHtml(r.name || "—") + '</span>'),
+    pair("Type", r.type || "tint_only"),
+    pair("Tint kind", t.type || "radial"),
+  ]));
+
+  if (isBand) {
+    sections.push(card("Band geometry", [
+      pair("Between", (t.between || []).join(" ⇄ ")),
+      pair("Resolution", resolves
+        ? '<span class="chip ok">resolves</span>'
+        : '<span class="chip warn">' + escapeHtml(resolveDetail) + '</span>'),
+    ]));
+  } else if (resolutions.length > 0) {
+    if (resolutions.length === 1) {
+      // Single (legacy or compound-of-one): show the original detail layout
+      const single = resolutions[0];
+      sections.push(card("Constraint", [
+        pair("Side", single.side || "—"),
+        pair("Of barrier", single.barrier
+          ? '<span class="accent">' + escapeHtml(single.barrier) + '</span>'
+          : '<span class="warn">unresolved (' + escapeHtml(single.token || single.raw) + ')</span>'),
+        pair("Resolution", resolves
+          ? '<span class="chip ok">resolves</span>'
+          : '<span class="chip warn">' + escapeHtml(resolveDetail) + '</span>'),
+      ]));
+    } else {
+      // Compound — show the logic + each constraint in a numbered list
+      const constraintRows = resolutions.map((r, i) => {
+        const sideTxt = r.side || "—";
+        const barTxt = r.barrier
+          ? '<span class="accent">' + escapeHtml(r.barrier) + '</span>'
+          : '<span class="warn">' + escapeHtml(r.token || r.raw) + ' ✗</span>';
+        return pair(`#${i + 1}`,
+          '<span class="neutral">' + sideTxt + ' OF</span> ' + barTxt);
+      });
+      sections.push(card(
+        "Compound constraint · " + constraintLogic.toUpperCase(),
+        [
+          ...constraintRows,
+          pair("Resolution", resolves
+            ? '<span class="chip ok">all resolve</span>'
+            : '<span class="chip warn">' + escapeHtml(resolveDetail) + '</span>'),
+        ]));
+    }
+  }
+
+  if (t.adjustments) {
+    sections.push(card("Tint adjustments — read-only", [
+      pair("R", fmtAdj(t.adjustments.r)),
+      pair("G", fmtAdj(t.adjustments.g)),
+      pair("B", fmtAdj(t.adjustments.b)),
+      pair("Desaturate", fmtAdj(t.desaturate || 0)),
+      pair("Strength", fmtAdj(t.strength || 1)),
+    ]));
+  }
+
+  // Cross-page jump button.
+  const proj = STATE.project || "";
+  const jumpUrl = "/paint" + (proj ? "?project=" + encodeURIComponent(proj) : "") +
+    (r.name ? "#region=" + encodeURIComponent(r.name) : "");
+  sections.push(
+    '<div style="text-align:right; margin-top:8px">' +
+      '<a class="jump-button" href="' + jumpUrl + '">' +
+        'Edit tint in Terrain <span class="arrow">→</span>' +
+      '</a>' +
+    '</div>'
+  );
+
+  sections.push(notice(
+    isBand
+      ? "Band tints derive their geometry from two barriers (configured here in step 05). " +
+        "The tint adjustments themselves are owned by the Terrain step."
+      : "Half-plane constraints reference a barrier by name. If the barrier is " +
+        "renamed or removed, this region's tint will no longer clip — the warning " +
+        "above will surface that condition."));
+
+  return sections.join("");
+}
+
+// ============================================================
+//  Inspector primitives
+// ============================================================
+function card(title, pairs, statRight) {
+  return '<div class="field-card">' +
+    '<div class="field-card__head"><h4>' + escapeHtml(title) + '</h4>' +
+    (statRight ? '<span class="stat">' + escapeHtml(statRight) + '</span>' : '') +
+    '</div>' +
+    '<dl style="margin:0">' + pairs.join("") + '</dl>' +
+    '</div>';
+}
+function pair(label, value) {
+  return '<div class="pair"><dt>' + escapeHtml(label) + '</dt><dd>' + value + '</dd></div>';
+}
+function strata(label) {
+  return '<div class="strata"><span class="strata__label">' +
+    escapeHtml(label) + '</span></div>';
+}
+function notice(text) {
+  return '<div class="field-card" style="padding:10px 14px">' +
+    '<div class="pair" style="grid-template-columns:1fr">' +
+    '<dd style="color:var(--bone-dim);line-height:1.6;font-size:10px;letter-spacing:0.04em">' +
+    escapeHtml(text) + '</dd></div></div>';
+}
+function swatch(rgb) {
+  if (!rgb || !Array.isArray(rgb)) return '<span class="neutral">—</span>';
+  const c = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+  return '<span style="display:inline-block;width:14px;height:10px;background:' + c +
+         ';border:1px solid var(--rule-2);vertical-align:middle;margin-right:6px"></span>' +
+         '<span class="neutral" style="font-variant-numeric:tabular-nums">' +
+         rgb[0] + " · " + rgb[1] + " · " + rgb[2] + '</span>';
+}
+function swatchFloat(rgb) {
+  if (!rgb || !Array.isArray(rgb)) return '<span class="neutral">—</span>';
+  const r255 = Math.round((rgb[0] || 0) * 255);
+  const g255 = Math.round((rgb[1] || 0) * 255);
+  const b255 = Math.round((rgb[2] || 0) * 255);
+  const c = "rgb(" + r255 + "," + g255 + "," + b255 + ")";
+  return '<span style="display:inline-block;width:14px;height:10px;background:' + c +
+         ';border:1px solid var(--rule-2);vertical-align:middle;margin-right:6px"></span>' +
+         '<span class="neutral" style="font-variant-numeric:tabular-nums">' +
+         (rgb[0] || 0).toFixed(2) + " · " + (rgb[1] || 0).toFixed(2) + " · " + (rgb[2] || 0).toFixed(2) + '</span>';
+}
+function fmtNum(n) {
+  if (n == null) return '<span class="neutral">—</span>';
+  return n.toLocaleString();
+}
+function fmtAdj(n) {
+  if (n == null) return '<span class="neutral">—</span>';
+  if (n === 0) return '<span class="neutral">0</span>';
+  const sign = n > 0 ? "+" : "";
+  return sign + n.toFixed(3);
+}
+function formatKm(km) {
+  return km.toFixed(1) + " km";
+}
+function formatLatLon(lat, lon) {
+  return '<span style="font-variant-numeric:tabular-nums">' +
+    (+lat).toFixed(3) + "° " + (+lon).toFixed(3) + "°</span>";
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+// ============================================================
+//  Save infrastructure
+// ============================================================
+// Edits flow STATE.cfg → debounced PUT to /api/config/<name>.
+// State machine: idle → dirty → saving → saved (or error).
+// 700ms debounce on dirty→saving so rapid keystrokes batch.
+const SAVE = {
+  pendingTimer: null,
+  inflight: false,
+  lastSavedAt: null,
+};
+
+function setSaveStatus(state, detail) {
+  const el = qs("#saveStatus");
+  el.setAttribute("data-state", state);
+  const labels = {
+    idle:   "Idle",
+    dirty:  "Unsaved",
+    saving: "Saving…",
+    saved:  "Saved",
+    error:  "Save failed",
+  };
+  qs("#saveStatusText").textContent = labels[state] || state;
+  qs("#saveStatusDetail").textContent = detail || "";
+}
+
+function markDirty() {
+  if (SAVE.pendingTimer) clearTimeout(SAVE.pendingTimer);
+  setSaveStatus("dirty");
+  SAVE.pendingTimer = setTimeout(commitSave, 700);
+  // Re-derive overlay + rail in real time. The expensive call (barrier
+  // path recompute) is debounced separately if needed.
+  render();
+}
+
+async function commitSave() {
+  if (!STATE.cfg || !STATE.project) return;
+  if (SAVE.inflight) {
+    // Another save kicked in mid-flight; re-queue.
+    SAVE.pendingTimer = setTimeout(commitSave, 200);
+    return;
+  }
+  SAVE.inflight = true;
+  setSaveStatus("saving");
+  try {
+    const res = await fetch("/api/config/" + STATE.project, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(STATE.cfg),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    SAVE.lastSavedAt = Date.now();
+    const stamp = new Date(SAVE.lastSavedAt).toLocaleTimeString();
+    setSaveStatus("saved", "@ " + stamp);
+
+    // Push a history snapshot after a successful save. The shared
+    // History module dedupes against the previous snapshot, so a no-op
+    // save is harmless.
+    if (window.Cartograph && Cartograph.History) {
+      Cartograph.History.pushSnapshot('autosave');
+    }
+  } catch (e) {
+    setSaveStatus("error", e.message || String(e));
+  } finally {
+    SAVE.inflight = false;
+  }
+}
+
+// ============================================================
+//  Editable widget helpers
+// ============================================================
+// Each helper returns an HTML string that includes a unique id for
+// later wiring via wireEditableInputs() below. We use data-* attrs to
+// describe the path into STATE.cfg so the change handlers can write
+// back uniformly.
+
+let __editId = 0;
+const __editBindings = []; // [{id, kind, path, parse, format}]
+
+function nextEditId() { __editId++; return "ne" + __editId; }
+
+// Bind a widget to a JSON path (dot-separated) into STATE.cfg.
+// e.g. path="sinking.enabled" or "barriers[0].style.width".
+// `parse` is called on the input string before storing; `format` shapes
+// the displayed value (mostly for numbers — "0.10" vs "0.1").
+function bind(kind, path, parse, format) {
+  const id = nextEditId();
+  __editBindings.push({ id, kind, path, parse, format });
+  return id;
+}
+
+function getByPath(obj, path) {
+  // Dotted path with optional [n] indexers.
+  if (!obj) return undefined;
+  const parts = path.split(/[.\[\]]/).filter(Boolean);
+  let cur = obj;
+  for (const p of parts) {
+    if (cur == null) return undefined;
+    cur = cur[isNaN(p) ? p : Number(p)];
+  }
+  return cur;
+}
+function setByPath(obj, path, value) {
+  const parts = path.split(/[.\[\]]/).filter(Boolean);
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    const key = isNaN(p) ? p : Number(p);
+    if (cur[key] == null) {
+      // Auto-create: next part decides shape (number → array, string → object).
+      cur[key] = isNaN(parts[i + 1]) ? {} : [];
+    }
+    cur = cur[key];
+  }
+  const last = parts[parts.length - 1];
+  cur[isNaN(last) ? last : Number(last)] = value;
+}
+
+// ---- widget renderers (return HTML strings; wired up after insertion) ----
+function inputText(path, opts = {}) {
+  const id = bind("text", path);
+  const cur = getByPath(STATE.cfg, path) ?? "";
+  return '<input class="field-input" id="' + id + '" type="text" value="' +
+    escapeHtml(cur) + '"' +
+    (opts.placeholder ? ' placeholder="' + escapeHtml(opts.placeholder) + '"' : "") +
+    ' data-path="' + path + '" />';
+}
+function inputNumber(path, opts = {}) {
+  const id = bind("number", path);
+  const cur = getByPath(STATE.cfg, path);
+  const val = cur == null ? "" : cur;
+  return '<input class="field-input field-input--num' +
+    (opts.small ? " field-input--small" : "") +
+    '" id="' + id + '" type="number" value="' + val +
+    '" step="' + (opts.step || "any") + '"' +
+    (opts.min != null ? ' min="' + opts.min + '"' : "") +
+    (opts.max != null ? ' max="' + opts.max + '"' : "") +
+    ' data-path="' + path + '" />';
+}
+function inputToggle(path) {
+  const id = bind("toggle", path);
+  const cur = !!getByPath(STATE.cfg, path);
+  return '<button class="field-toggle" id="' + id +
+    '" type="button" role="switch" aria-checked="' + cur +
+    '" data-path="' + path + '"></button>' +
+    '<span class="field-toggle__label">' + (cur ? "ON" : "OFF") + '</span>';
+}
+function inputSelect(path, options) {
+  const id = bind("select", path);
+  const cur = getByPath(STATE.cfg, path);
+  const opts = options.map(o => {
+    const val = typeof o === "string" ? o : o.value;
+    const lab = typeof o === "string" ? o : o.label;
+    const sel = (cur === val) ? " selected" : "";
+    return '<option value="' + escapeHtml(val) + '"' + sel + '>' +
+      escapeHtml(lab) + '</option>';
+  }).join("");
+  return '<select class="field-select" id="' + id +
+    '" data-path="' + path + '">' + opts + '</select>';
+}
+function inputColor(path) {
+  // Path points to an array [r, g, b] or [r, g, b, a]
+  const id = bind("color", path);
+  const arr = getByPath(STATE.cfg, path) || [180, 150, 90];
+  const hex = "#" +
+    [arr[0], arr[1], arr[2]].map(n =>
+      Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0"))
+    .join("");
+  return '<label class="field-color" data-path="' + path + '">' +
+    '<span class="field-color__swatch" style="--current:' + hex + '"></span>' +
+    '<input type="color" id="' + id + '" value="' + hex + '" />' +
+    '<span class="field-color__rgb">' +
+    [arr[0], arr[1], arr[2]].map(n => Math.round(n)).join(" · ") +
+    '</span></label>';
+}
+function inputOffset(path) {
+  // Path points to [x, y]; we render two number inputs side-by-side.
+  const arr = getByPath(STATE.cfg, path) || [0, 0];
+  return '<span class="field-offset">' +
+    '<span class="field-offset__label">x</span>' +
+    inputNumber(path + "[0]", { small: true, step: 1 }) +
+    '<span class="field-offset__label">y</span>' +
+    inputNumber(path + "[1]", { small: true, step: 1 }) +
+    '</span>';
+}
+
+// editPair: like pair() but rhs is an editable widget instead of a string.
+function editPair(label, widget) {
+  return '<div class="pair pair--editable"><dt>' + escapeHtml(label) +
+    '</dt><dd>' + widget + '</dd></div>';
+}
+
+// ---- Ship 4 widgets: glyph picker, between-barriers, hatching swatch ----
+
+// 24 hazard / instrument symbols, mapped to short labels for UX context.
+// Most are post-apocalyptic / surveying glyphs that fit the page tone.
+const GLYPH_OPTIONS = [
+  { ch: "☣", name: "biohazard" },
+  { ch: "☢", name: "radioactive" },
+  { ch: "⚠", name: "warning" },
+  { ch: "⛔", name: "no entry" },
+  { ch: "⊘", name: "prohibited" },
+  { ch: "☠", name: "skull" },
+  { ch: "✖", name: "heavy x" },
+  { ch: "⊗", name: "circled x" },
+  { ch: "✚", name: "heavy cross" },
+  { ch: "✙", name: "outlined cross" },
+  { ch: "⊕", name: "circled plus" },
+  { ch: "⊖", name: "circled minus" },
+  { ch: "✦", name: "four-point star" },
+  { ch: "❉", name: "ballot bold" },
+  { ch: "❋", name: "asterisk-8" },
+  { ch: "✱", name: "heavy asterisk" },
+  { ch: "✺", name: "asterisk-16" },
+  { ch: "❂", name: "pinwheel star" },
+  { ch: "◈", name: "diamond-in-square" },
+  { ch: "◉", name: "fisheye" },
+  { ch: "⊞", name: "squared plus" },
+  { ch: "⊠", name: "squared x" },
+  { ch: "✥", name: "shadowed diamond" },
+  { ch: "◇", name: "white diamond" },
+];
+
+function inputGlyphPicker(path) {
+  // Build a 6-col × 4-row grid plus a "current selection" preview row.
+  const id = bind("glyph", path);
+  const cur = getByPath(STATE.cfg, path) || GLYPH_OPTIONS[0].ch;
+  const curOpt = GLYPH_OPTIONS.find(o => o.ch === cur);
+  const curName = curOpt ? curOpt.name : "custom";
+  const cells = GLYPH_OPTIONS.map((o, i) => {
+    const sel = (o.ch === cur) ? " is-selected" : "";
+    return '<button type="button" class="glyph-picker__cell' + sel +
+      '" data-glyph-idx="' + i + '" title="' + escapeHtml(o.name) + '">' +
+      o.ch + '</button>';
+  }).join("");
+  return '<div class="glyph-picker__current">' +
+    '<span class="glyph-picker__current-symbol" id="' + id + '">' +
+    escapeHtml(cur) + '</span>' +
+    '<span class="glyph-picker__current-name">' + escapeHtml(curName) + '</span>' +
+    '</div>' +
+    '<div class="glyph-picker" data-glyph-path="' + path + '" ' +
+    'data-current-id="' + id + '">' + cells + '</div>';
+}
+
+function inputBetween(path, currentArr) {
+  // Two select dropdowns + a swap button between them. Options are the
+  // currently-configured barrier names. `path` points to the array on
+  // STATE.cfg (e.g. "buffer_zone.between"); we bind individual indexes.
+  const barriers = (STATE.cfg.barriers || []).map(b => b.name).filter(Boolean);
+  const [a, b] = currentArr || [null, null];
+  const buildSelect = (idx, current) => {
+    const id = bind("select", path + "[" + idx + "]");
+    const opts = ['<option value="">(unset)</option>']
+      .concat(barriers.map(n => {
+        const sel = (n === current) ? " selected" : "";
+        return '<option value="' + escapeHtml(n) + '"' + sel + '>' +
+          escapeHtml(n) + '</option>';
+      }))
+      .join("");
+    return '<select class="field-select" id="' + id +
+      '" data-path="' + path + "[" + idx + "]" + '">' + opts + '</select>';
+  };
+  return '<div class="between-picker">' +
+    buildSelect(0, a) +
+    '<button class="between-picker__swap" type="button" ' +
+    'data-between-swap="' + escapeHtml(path) + '" title="swap">⇆</button>' +
+    buildSelect(1, b) +
+    '</div>';
+}
+
+// hatchingSwatch — pure HTML rendering (no binding). Reads cfg path each
+// render so it auto-updates when neighboring fields change.
+function hatchingSwatch(hatchingPath, glyphPath) {
+  const hatch = getByPath(STATE.cfg, hatchingPath) || {};
+  const glyph = getByPath(STATE.cfg, glyphPath);
+  const c = hatch.color || [200, 150, 60, 120];
+  const colorRgb = "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")";
+  const alpha = (c[3] != null ? c[3] : 120) / 255;
+  const spacing = Math.max(2, hatch.spacing || 14) / 2;  // shrink for swatch
+  const dir = (hatch.direction || "diagonal").toLowerCase();
+  // Build a small SVG with the hatching pattern
+  let lines = "";
+  if (dir === "horizontal") {
+    for (let y = 0; y < 56; y += spacing)
+      lines += `<line x1="0" y1="${y}" x2="280" y2="${y}" stroke="${colorRgb}" stroke-opacity="${alpha}" stroke-width="1"/>`;
+  } else if (dir === "vertical") {
+    for (let x = 0; x < 280; x += spacing)
+      lines += `<line x1="${x}" y1="0" x2="${x}" y2="56" stroke="${colorRgb}" stroke-opacity="${alpha}" stroke-width="1"/>`;
+  } else {
+    for (let i = -56; i < 280 + 56; i += spacing) {
+      lines += `<line x1="${i}" y1="0" x2="${i + 56}" y2="56" stroke="${colorRgb}" stroke-opacity="${alpha}" stroke-width="1"/>`;
+    }
+  }
+  // Sample glyphs evenly across the swatch
+  let glyphs = "";
+  if (glyph) {
+    for (let i = 1; i <= 3; i++) {
+      const gx = (280 / 4) * i;
+      glyphs += `<text x="${gx}" y="34" fill="${colorRgb}" fill-opacity="0.85" ` +
+        `font-family="serif" font-size="20" text-anchor="middle">` +
+        escapeHtml(glyph) + `</text>`;
+    }
+  }
+  return '<div class="hatching-swatch">' +
+    '<svg viewBox="0 0 280 56" preserveAspectRatio="none" ' +
+    'style="width:100%;height:100%;display:block">' +
+    lines + glyphs + '</svg>' +
+    '<span class="hatching-swatch__caption">preview · ' +
+    escapeHtml(dir) + ' · ' + (hatch.spacing || "?") + 'px' +
+    '</span></div>';
+}
+
+// Wire up handlers after the inspector is inserted into the DOM.
+// Called at the end of renderInspector(); attaches change/input handlers
+// to each tracked binding and clears the registry.
+function wireEditableInputs() {
+  // True when an edited path can affect on-canvas SVG overlays. We
+  // redraw the overlay synchronously on these edits so band geometry,
+  // band tints, and ghost glyphs update in real time. (Edits to
+  // unrelated fields like settlement notes don't trigger redraws —
+  // the inspector body update is enough.)
+  const isOverlayPath = (path) => (
+    path.includes("corridor") ||
+    path.includes("offset_degrees") ||
+    path.includes("direction") ||
+    path.includes("buffer_zone") ||
+    path.includes("contamination") ||
+    path.includes("reference_barrier")
+  );
+
+  for (const b of __editBindings) {
+    const el = document.getElementById(b.id);
+    if (!el) continue;
+    const path = el.dataset.path || b.path;
+    const liveRedraw = isOverlayPath(path);
+    if (b.kind === "text") {
+      el.addEventListener("input", () => {
+        setByPath(STATE.cfg, path, el.value);
+        markDirty();
+        if (liveRedraw) drawOverlay();
+      });
+    } else if (b.kind === "number") {
+      el.addEventListener("input", () => {
+        const raw = el.value;
+        if (raw === "") {
+          setByPath(STATE.cfg, path, null);
+        } else {
+          const n = Number(raw);
+          if (!Number.isNaN(n)) setByPath(STATE.cfg, path, n);
+        }
+        markDirty();
+        if (liveRedraw) drawOverlay();
+      });
+    } else if (b.kind === "toggle") {
+      el.addEventListener("click", () => {
+        const cur = el.getAttribute("aria-checked") === "true";
+        const next = !cur;
+        el.setAttribute("aria-checked", next);
+        const lbl = el.parentElement.querySelector(".field-toggle__label");
+        if (lbl) lbl.textContent = next ? "ON" : "OFF";
+        setByPath(STATE.cfg, path, next);
+        markDirty();
+        if (liveRedraw) drawOverlay();
+      });
+    } else if (b.kind === "select") {
+      el.addEventListener("change", () => {
+        setByPath(STATE.cfg, path, el.value);
+        markDirty();
+        if (liveRedraw) drawOverlay();
+      });
+    } else if (b.kind === "color") {
+      el.addEventListener("input", () => {
+        const hex = el.value;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b2 = parseInt(hex.slice(5, 7), 16);
+        // Preserve alpha if the array has 4 elements.
+        const cur = getByPath(STATE.cfg, path) || [];
+        const alpha = cur.length >= 4 ? cur[3] : null;
+        const newArr = alpha != null ? [r, g, b2, alpha] : [r, g, b2];
+        setByPath(STATE.cfg, path, newArr);
+        // Update sibling swatch + rgb readout in place.
+        const wrap = el.closest(".field-color");
+        if (wrap) {
+          const sw = wrap.querySelector(".field-color__swatch");
+          if (sw) sw.style.setProperty("--current", hex);
+          const rgb = wrap.querySelector(".field-color__rgb");
+          if (rgb) rgb.textContent = r + " · " + g + " · " + b2;
+        }
+        markDirty();
+      });
+    }
+  }
+  __editBindings.length = 0;
+
+  // Wire up glyph picker grids — clicking any cell sets the selection,
+  // updates the .is-selected state, and writes back to STATE.cfg.
+  for (const grid of document.querySelectorAll("#insBody .glyph-picker")) {
+    const path = grid.dataset.glyphPath;
+    const curId = grid.dataset.currentId;
+    grid.addEventListener("click", (e) => {
+      const cell = e.target.closest(".glyph-picker__cell");
+      if (!cell) return;
+      const idx = Number(cell.dataset.glyphIdx);
+      const opt = GLYPH_OPTIONS[idx];
+      if (!opt) return;
+      // Update selection state in DOM (immediate feedback)
+      for (const c of grid.querySelectorAll(".glyph-picker__cell")) {
+        c.classList.toggle("is-selected", c === cell);
+      }
+      const curEl = document.getElementById(curId);
+      if (curEl) curEl.textContent = opt.ch;
+      // Update sibling name text
+      const nameEl = grid.previousElementSibling
+        ? grid.previousElementSibling.querySelector(".glyph-picker__current-name")
+        : null;
+      if (nameEl) nameEl.textContent = opt.name;
+      // Persist + re-render so the on-canvas + swatch previews update
+      setByPath(STATE.cfg, path, opt.ch);
+      markDirty();
+    });
+  }
+
+  // Wire between-picker swap buttons (swap a/b indices)
+  for (const btn of document.querySelectorAll("#insBody .between-picker__swap")) {
+    btn.addEventListener("click", () => {
+      const path = btn.dataset.betweenSwap;
+      const arr = getByPath(STATE.cfg, path) || [];
+      if (arr.length === 2) {
+        setByPath(STATE.cfg, path, [arr[1], arr[0]]);
+        markDirty();
+      }
+    });
+  }
+
+  // Wire up PICK buttons (delegated within the inspector body so they
+  // survive inspector re-renders).
+  for (const btn of document.querySelectorAll("#insBody .pick-btn")) {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      // Epicenter pick is a different target — no barrier idx
+      if (btn.dataset.pickEpicenter) {
+        startPickMode({ target: "epicenter" });
+        return;
+      }
+      const idx = Number(btn.dataset.pickBarrier);
+      const scope = btn.dataset.pickScope;
+      if (!STATE.roads || !STATE.roads.__points || !STATE.roads.__points.length) {
+        ensureRoadsLoaded().then(() =>
+          startPickMode({ target: "barrier_endpoint",
+                          barrierIdx: idx, scope }));
+      } else {
+        startPickMode({ target: "barrier_endpoint",
+                        barrierIdx: idx, scope });
+      }
+    });
+  }
+
+  // Contamination inspector tab switching
+  for (const tab of document.querySelectorAll("#insBody .inspector-tab")) {
+    tab.addEventListener("click", () => {
+      __contamTab = tab.dataset.contamTab;
+      renderInspector();
+    });
+  }
+
+  // Contamination FETCH SOURCES button
+  const fetchBtn = document.getElementById("fetchSourcesBtn");
+  if (fetchBtn) {
+    fetchBtn.addEventListener("click", () => fetchContaminationSources());
+  }
+
+  // Compute Path button (astar_offset deviation viz)
+  const computeBtn = document.getElementById("computeOffsetBtn");
+  if (computeBtn) {
+    computeBtn.addEventListener("click", () => {
+      const idx = Number(computeBtn.dataset.barrierIdx);
+      computeOffsetPath(idx);
+    });
+  }
+
+  // Blocker checkboxes — each toggles a name into spread.blocked_by
+  for (const cb of document.querySelectorAll("#insBody [data-blocker-toggle]")) {
+    cb.addEventListener("change", () => {
+      const name = cb.dataset.blockerToggle;
+      const path = "contamination.spread.blocked_by";
+      const arr = (getByPath(STATE.cfg, path) || []).slice();
+      const idx = arr.indexOf(name);
+      if (cb.checked && idx === -1) arr.push(name);
+      else if (!cb.checked && idx >= 0) arr.splice(idx, 1);
+      setByPath(STATE.cfg, path, arr);
+      markDirty();
+    });
+  }
+
+  // Octave add/remove
+  for (const btn of document.querySelectorAll("#insBody [data-octave-remove]")) {
+    btn.addEventListener("click", () => {
+      const i = Number(btn.dataset.octaveRemove);
+      const arr = (getByPath(STATE.cfg, "contamination.edge_noise.octaves") || []).slice();
+      arr.splice(i, 1);
+      setByPath(STATE.cfg, "contamination.edge_noise.octaves", arr);
+      markDirty();
+      renderInspector();
+    });
+  }
+  const addBtn = document.querySelector("#insBody [data-octave-add]");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      const arr = (getByPath(STATE.cfg, "contamination.edge_noise.octaves") || []).slice();
+      arr.push({ scale: 5, weight: 0.1 });
+      setByPath(STATE.cfg, "contamination.edge_noise.octaves", arr);
+      markDirty();
+      renderInspector();
+    });
+  }
+}
+
+// ============================================================
+//  Offset deviation — compute live A* with current corridor settings
+// ============================================================
+async function computeOffsetPath(idx) {
+  if (!STATE.project) return;
+  const btn = document.getElementById("computeOffsetBtn");
+  const badge = document.getElementById("computeOffsetBadge");
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+  }
+  if (badge) badge.textContent = "RUNNING…";
+  try {
+    // Send the FULL current barrier config (including unsaved edits) so
+    // the server runs A* with what the user sees, not what's on disk.
+    // The server's barrier-preview uses the BARRIER_INDEX path which
+    // reads from disk; for offset we want to honor live edits.
+    const liveCfg = STATE.cfg.barriers[idx];
+    const res = await fetch("/api/barrier-preview/" + STATE.project, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        barrier_index: idx,
+        // override merges fields onto the saved barrier config — here
+        // we override the corridor + offset_degrees from live edits.
+        override: {
+          corridor: liveCfg.corridor || {},
+          offset_degrees: liveCfg.offset_degrees,
+          direction: liveCfg.direction,
+          reference_barrier: liveCfg.reference_barrier,
+        },
+      }),
+    });
+    if (!res.ok) {
+      if (badge) badge.textContent = "FAILED";
+      return;
+    }
+    const data = await res.json();
+    if (data.warnings && data.warnings.length) {
+      if (badge) badge.textContent = "⚠ " + data.warnings[0].slice(0, 16);
+      console.warn("astar_offset preview warning:", data.warnings);
+    } else if (badge) {
+      badge.textContent =
+        (data.path?.length || 0) + "PTS · " + (data.length_km || 0) + "KM";
+    }
+    // Patch the in-memory STATE.paths so the canvas redraws with the
+    // newly-computed path. Don't clobber the original — the user can
+    // still hit Compute again and see iteration.
+    if (data.path && data.path.length && STATE.paths) {
+      const target = STATE.paths.barriers.find(
+        bp => bp.name === STATE.cfg.barriers[idx].name);
+      if (target) {
+        target.path = data.path;
+        target.length_km = data.length_km;
+      }
+    }
+    drawOverlay();
+  } catch (e) {
+    if (badge) badge.textContent = "FAILED";
+    console.warn("compute offset path error:", e);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove("is-loading");
+    }
+  }
+}
+
+// ============================================================
+//  Contamination — fetch + render sources on the canvas
+// ============================================================
+async function fetchContaminationSources() {
+  const btn = document.getElementById("fetchSourcesBtn");
+  if (!STATE.project) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+  }
+  try {
+    const cfg_query = (STATE.cfg.contamination &&
+      STATE.cfg.contamination.sources &&
+      STATE.cfg.contamination.sources.query) || "";
+    const res = await fetch("/api/contamination-sources/" + STATE.project, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: cfg_query }),
+    });
+    if (!res.ok) {
+      console.warn("contamination-sources fetch failed:", res.status);
+      return;
+    }
+    const data = await res.json();
+    STATE.contam_sources = data;
+    // Re-render so the badge shows the new count and the canvas redraws dots
+    renderInspector();
+    drawOverlay();
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove("is-loading");
+    }
+  }
+}
+
+// ============================================================
+//  Canvas + SVG overlay
+// ============================================================
+function renderCanvas() {
+  const empty = qs("#canvasEmpty");
+  const frame = qs("#canvasFrame");
+  const img = qs("#canvasImg");
+  if (!STATE.preview) {
+    empty.hidden = false;
+    frame.hidden = true;
+    return;
+  }
+  empty.hidden = true;
+  frame.hidden = false;
+  img.src = STATE.preview.url;
+  img.onload = () => drawOverlay();
+  if (img.complete) drawOverlay();
+}
+
+function latLonToSvg(lat, lon) {
+  // SVG viewBox set in drawOverlay() so 0,0 is top-left of CANVAS image,
+  // which is terrain + border. But /api/render-info gives canvas dims.
+  if (!STATE.info) return [0, 0];
+  const b = STATE.info.bounds || {};
+  const w = STATE.info.canvas_w || 0;
+  const h = STATE.info.canvas_h || 0;
+  const border = STATE.info.border || 0;
+  const tw = STATE.info.terrain_w || 0;
+  const th = STATE.info.terrain_h || 0;
+  const x = border + ((lon - b.lon_w) / (b.lon_e - b.lon_w)) * tw;
+  const y = border + ((b.lat_n - lat) / (b.lat_n - b.lat_s)) * th;
+  return [x, y];
+}
+
+function drawOverlay() {
+  const svg = qs("#overlaySvg");
+  if (!STATE.info) { svg.innerHTML = ""; return; }
+  const w = STATE.info.canvas_w;
+  const h = STATE.info.canvas_h;
+  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+
+  const layers = deriveLayers();
+  const sel = layers.find(l => l.id === STATE.selectedLayerId);
+
+  const out = [];
+
+  // Sinking polygon — drawn as cyan dashed outline (we don't have polygon
+  // points client-side, so just place a marker at the configured center)
+  const sinking = layers.find(l => l.type === "sinking");
+  if (sinking && sinking.cfg.enabled) {
+    const dim = (sel && sel.id !== sinking.id);
+    out.push(svgGroup("sinking", dim, [
+      // Without geo polygons here we draw a "submerged" wave glyph at
+      // the canvas SW corner as a state indicator; the actual region
+      // outline appears in the rendered image once the user hits render.
+      '<text x="' + (w * 0.5) + '" y="' + (h * 0.92) + '" ' +
+        'fill="var(--hazard-cyan)" font-size="' + Math.max(28, h * 0.022) + '" ' +
+        'text-anchor="middle" font-family="serif" opacity="0.55">≈ ' +
+        escapeHtml(sinking.cfg.region || "submerged") + ' ≈</text>'
+    ]));
+  }
+
+  // Barriers
+  const barrierEntries = (STATE.paths && STATE.paths.barriers) || [];
+  for (const bp of barrierEntries) {
+    const cfgEntry = layers.find(l => l.type === "barrier" && l.cfg.name === bp.name);
+    if (!cfgEntry) continue;
+    const isSelected = sel && sel.id === cfgEntry.id;
+    const dim = (sel && !isSelected);
+
+    if (!bp.path || bp.path.length < 2) continue;
+    const points = bp.path.map(([la, lo]) => latLonToSvg(la, lo).map(v => v.toFixed(1)).join(","));
+    const stroke = stylColorRGB(bp.style);
+    const width = (bp.style || {}).width || 3;
+    const isDashed = !!(bp.style || {}).dashed;
+    const dashAttr = isDashed
+      ? ' stroke-dasharray="' + ((bp.style.dash_length || 12) * 2) + ',' + ((bp.style.dash_length || 12) * 2) + '"'
+      : '';
+    out.push(svgGroup("barrier-" + bp.name, dim, [
+      // Shadow stroke
+      '<polyline fill="none" stroke="rgba(0,0,0,0.55)" stroke-width="' +
+        ((bp.style.shadow_width || width + 2) * 1.4) + '" stroke-linejoin="round" stroke-linecap="round" ' +
+        'points="' + points.join(" ") + '"' + dashAttr + ' />',
+      // Color stroke
+      '<polyline fill="none" stroke="' + stroke + '" stroke-width="' +
+        (width * 1.4) + '" stroke-linejoin="round" stroke-linecap="round" ' +
+        (isSelected ? 'opacity="1"' : 'opacity="0.85"') +
+        ' points="' + points.join(" ") + '"' + dashAttr + ' />',
+      // Endpoint anchors
+      ...endpointAnchors(bp.path, stroke),
+    ]));
+  }
+
+  // Offset deviation visualization — when an astar_offset barrier is
+  // selected, overlay (a) its reference barrier as a ghost line,
+  // (b) the offset TARGET curve as dashed, and (c) the max_deviation
+  // band as a translucent stripe. All client-side math; the actual A*
+  // path comes from STATE.paths above.
+  if (sel && sel.type === "barrier" &&
+      sel.cfg.method === "astar_offset") {
+    const offsetCfg = sel.cfg;
+    const refName = offsetCfg.reference_barrier;
+    const refEntry = barrierEntries.find(bp => bp.name === refName);
+    if (refEntry && refEntry.path && refEntry.path.length >= 2) {
+      const dir = (offsetCfg.direction || "north").toLowerCase();
+      const offset = parseFloat(offsetCfg.offset_degrees || 0.1);
+      const maxDev = parseFloat(
+        (offsetCfg.corridor || {}).max_deviation || 0.15);
+      // Direction → (dlat, dlon) shift of each reference point
+      let dlat = 0, dlon = 0;
+      if      (dir === "north") dlat =  offset;
+      else if (dir === "south") dlat = -offset;
+      else if (dir === "east")  dlon =  offset;
+      else if (dir === "west")  dlon = -offset;
+      const targetLatLon = refEntry.path.map(([la, lo]) =>
+        [la + dlat, lo + dlon]);
+      // Band edges: ±max_deviation along the same axis
+      const isLatAxis = (dir === "north" || dir === "south");
+      const upperLatLon = refEntry.path.map(([la, lo]) =>
+        isLatAxis ? [la + dlat + maxDev, lo + dlon]
+                  : [la + dlat, lo + dlon + maxDev]);
+      const lowerLatLon = refEntry.path.map(([la, lo]) =>
+        isLatAxis ? [la + dlat - maxDev, lo + dlon]
+                  : [la + dlat, lo + dlon - maxDev]);
+      // Project everything to canvas pixels
+      const targetPts = targetLatLon.map(([la, lo]) =>
+        latLonToSvg(la, lo).map(v => v.toFixed(1)).join(",")).join(" ");
+      const refPts = refEntry.path.map(([la, lo]) =>
+        latLonToSvg(la, lo).map(v => v.toFixed(1)).join(",")).join(" ");
+      // Band polygon: upper curve forward, lower curve reversed
+      const upperPx = upperLatLon.map(([la, lo]) => latLonToSvg(la, lo));
+      const lowerPx = lowerLatLon.map(([la, lo]) => latLonToSvg(la, lo));
+      const bandPts =
+        upperPx.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1))
+          .concat(lowerPx.slice().reverse()
+            .map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)))
+          .join(" ");
+
+      // Color from the reference barrier's style (so the ghost curves
+      // visually echo what they're tracking, not introduce new color).
+      const refColor = stylColorRGB(refEntry.style || {});
+
+      out.push(svgGroup("offset-deviation", false, [
+        // Max-deviation band — wide translucent fill. Cross-hatch via
+        // a pattern wouldn't survive client-side compositing well, so
+        // we use a flat color at very low alpha to suggest "tolerance
+        // zone" without competing with the actual paths.
+        '<polygon points="' + bandPts + '" ' +
+          'fill="' + refColor + '" fill-opacity="0.10" ' +
+          'stroke="' + refColor + '" stroke-opacity="0.30" ' +
+          'stroke-width="0.6" stroke-dasharray="2,2" />',
+        // Reference path — solid ghost (the thing being tracked)
+        '<polyline fill="none" stroke="' + refColor + '" ' +
+          'stroke-width="1.5" opacity="0.4" ' +
+          'points="' + refPts + '" />',
+        // Target curve — dashed at higher opacity (the goal)
+        '<polyline fill="none" stroke="' + refColor + '" ' +
+          'stroke-width="1.2" stroke-dasharray="6,4" opacity="0.7" ' +
+          'points="' + targetPts + '" />',
+      ]));
+    }
+  }
+
+  // Buffer zone — polygon outline + centerline ghost glyphs.
+  const buffer = (STATE.paths && STATE.paths.buffer_zone);
+  if (buffer && buffer.polygon && buffer.polygon.length > 2) {
+    const cfgEntry = layers.find(l => l.type === "buffer");
+    const isSelected = sel && sel.id === (cfgEntry || {}).id;
+    const dim = sel && !isSelected;
+    const pts = buffer.polygon.map(([la, lo]) =>
+      latLonToSvg(la, lo).map(v => v.toFixed(1)).join(",")).join(" ");
+    // Pull live hatching color from STATE.cfg (buffer.hatching is what the
+    // server returned — could be stale by ms; STATE.cfg is current).
+    const liveHatch = (STATE.cfg.buffer_zone && STATE.cfg.buffer_zone.hatching)
+      || buffer.hatching || {};
+    const fillColor = liveHatch.color || [200, 150, 60, 100];
+    const fillRgba = "rgba(" + fillColor[0] + "," + fillColor[1] + "," +
+      fillColor[2] + "," + ((fillColor[3] || 100) / 255 * 0.45) + ")";
+    const strokeRgba = "rgba(" + fillColor[0] + "," + fillColor[1] + "," +
+      fillColor[2] + ",0.75)";
+    const children = [
+      '<polygon points="' + pts + '" fill="' + fillRgba +
+        '" stroke="' + strokeRgba + '" stroke-width="1" stroke-dasharray="4,3" />',
+    ];
+
+    // Ghost glyphs at sampled centerline positions — these update live
+    // when the user adjusts symbols.count or symbols.character.
+    const between = buffer.between || [];
+    const liveSym = (STATE.cfg.buffer_zone && STATE.cfg.buffer_zone.symbols) || {};
+    const glyphChar = liveSym.character || "";
+    const count = Math.max(0, Math.min(64, liveSym.count || 0));
+    const fontSize = liveSym.font_size || 18;
+    if (glyphChar && count > 0 && between.length === 2) {
+      const pathA = barrierEntries.find(bp => bp.name === between[0]);
+      const pathB = barrierEntries.find(bp => bp.name === between[1]);
+      if (pathA && pathB && pathA.path && pathB.path) {
+        const ptsA = pathA.path.map(([la, lo]) => latLonToSvg(la, lo));
+        const ptsB = pathB.path.map(([la, lo]) => latLonToSvg(la, lo));
+        const gColorArr = liveSym.color || [180, 130, 50];
+        const gColor = "rgb(" + gColorArr[0] + "," + gColorArr[1] +
+          "," + gColorArr[2] + ")";
+        for (let i = 0; i < count; i++) {
+          const frac = (i + 0.5) / count;
+          const pa = pointAtFractionPx(ptsA, frac);
+          const pb = pointAtFractionPx(ptsB, frac);
+          if (!pa || !pb) continue;
+          const cx = (pa[0] + pb[0]) / 2;
+          const cy = (pa[1] + pb[1]) / 2;
+          children.push(
+            '<text x="' + cx.toFixed(0) + '" y="' + cy.toFixed(0) +
+            '" fill="' + gColor + '" fill-opacity="0.95" ' +
+            'font-family="serif" font-size="' + fontSize + '" ' +
+            'text-anchor="middle" dominant-baseline="central" ' +
+            'style="paint-order:stroke;stroke:rgba(30,25,18,0.7);stroke-width:1.5">' +
+            escapeHtml(glyphChar) + '</text>'
+          );
+        }
+      }
+    }
+    out.push(svgGroup("buffer", dim, children));
+  }
+
+  // Contamination — epicenter reticle, fetched source dots, and (when
+  // contamination layer is selected) faint weighting tethers from each
+  // source to the epicenter.
+  const contam = layers.find(l => l.type === "contamination");
+  if (contam) {
+    // Read live values from STATE.cfg so edits update without a re-fetch.
+    const liveContam = STATE.cfg.contamination || {};
+    const enabled = !!liveContam.enabled;
+    const dim = sel && sel.id !== contam.id;
+    const ep = (liveContam.sources || {}).epicenter;
+    const sourcesData = STATE.contam_sources;
+    const isSelected = sel && sel.id === contam.id;
+
+    // Source dots — shown when contamination is enabled OR layer is
+    // selected (so the user can preview sources during configuration
+    // even if the layer is currently disabled).
+    if (sourcesData && Array.isArray(sourcesData.sources) &&
+        sourcesData.sources.length && (enabled || isSelected)) {
+      const dotChildren = [];
+      // For epicenter weighting visualization: only when layer is
+      // selected (otherwise it's noise on the map).
+      const showWeighting = isSelected && ep && ep.lat != null && ep.lon != null;
+      const weightScale = (liveContam.sources || {}).weight_scale || 100;
+      const weighting = (liveContam.sources || {}).weighting ||
+        "distance_from_epicenter";
+
+      let epX = null, epY = null;
+      if (showWeighting) [epX, epY] = latLonToSvg(ep.lat, ep.lon);
+
+      for (let i = 0; i < sourcesData.sources.length; i++) {
+        const [la, lo] = sourcesData.sources[i];
+        const [sx, sy] = latLonToSvg(la, lo);
+        // Weighting line first (rendered behind the dot)
+        if (showWeighting) {
+          const km = haversineKm(la, lo, ep.lat, ep.lon);
+          const w = (weighting === "uniform")
+            ? 1.0
+            : Math.exp(-km / weightScale);
+          const opacity = Math.max(0.05, Math.min(0.5, w * 0.5));
+          dotChildren.push(
+            '<line class="contam-weighting-line" x1="' + sx.toFixed(1) +
+            '" y1="' + sy.toFixed(1) + '" x2="' + epX.toFixed(1) +
+            '" y2="' + epY.toFixed(1) +
+            '" stroke="var(--plague-purple)" stroke-width="0.6" ' +
+            'stroke-opacity="' + opacity.toFixed(3) + '" />'
+          );
+        }
+        // Stagger reveal — 8ms per dot (107 dots over ~860ms).
+        const delay = Math.min(800, i * 8);
+        dotChildren.push(
+          '<circle class="contam-source-dot is-revealed" ' +
+          'cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" r="3.5" ' +
+          'style="transition-delay:' + delay + 'ms,' + delay + 'ms" />'
+        );
+      }
+      out.push(svgGroup("contam-sources", dim, dotChildren));
+    }
+
+    // Epicenter reticle (always shown when configured + enabled, OR when
+    // layer is selected — preview during configuration).
+    if (ep && ep.lat != null && ep.lon != null && (enabled || isSelected)) {
+      const [x, y] = latLonToSvg(ep.lat, ep.lon);
+      out.push(svgGroup("contam-epicenter", dim, [
+        '<g opacity="' + (dim ? 0.35 : 1) + '">' +
+        '<circle cx="' + x + '" cy="' + y + '" r="20" fill="none" ' +
+          'stroke="var(--plague-purple)" stroke-width="1.2" />' +
+        '<circle cx="' + x + '" cy="' + y + '" r="8" fill="none" ' +
+          'stroke="var(--plague-purple)" stroke-width="1" stroke-dasharray="2,2" />' +
+        '<line x1="' + (x - 28) + '" y1="' + y + '" x2="' + (x - 12) + '" y2="' + y +
+          '" stroke="var(--plague-purple)" stroke-width="1.2" />' +
+        '<line x1="' + (x + 12) + '" y1="' + y + '" x2="' + (x + 28) + '" y2="' + y +
+          '" stroke="var(--plague-purple)" stroke-width="1.2" />' +
+        '<line x1="' + x + '" y1="' + (y - 28) + '" x2="' + x + '" y2="' + (y - 12) +
+          '" stroke="var(--plague-purple)" stroke-width="1.2" />' +
+        '<line x1="' + x + '" y1="' + (y + 12) + '" x2="' + x + '" y2="' + (y + 28) +
+          '" stroke="var(--plague-purple)" stroke-width="1.2" />' +
+        '<text x="' + (x + 22) + '" y="' + (y + 5) +
+          '" fill="var(--plague-purple)" font-family="monospace" ' +
+          'font-size="11">epicenter</text>' +
+        '</g>'
+      ]));
+    }
+  }
+
+  svg.innerHTML = out.join("");
+}
+
+function svgGroup(klass, dim, children) {
+  return '<g class="' + klass + '" opacity="' + (dim ? 0.18 : 1) + '">' +
+    children.join("") + '</g>';
+}
+
+// Great-circle distance in kilometers between two (lat, lon) pairs.
+// Used by the contamination weighting visualization.
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371.0;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dp / 2) ** 2
+          + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Linear interpolation along a polyline by arc-length fraction. Used to
+// sample centerline positions for buffer-zone ghost glyphs. Pure 2D pixel
+// coords — input is [[x,y],...].
+function pointAtFractionPx(pts, frac) {
+  if (!pts || pts.length === 0) return null;
+  if (pts.length === 1 || frac <= 0) return pts[0];
+  if (frac >= 1) return pts[pts.length - 1];
+  // Cumulative length
+  let total = 0;
+  const segLens = [];
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0] - pts[i - 1][0];
+    const dy = pts[i][1] - pts[i - 1][1];
+    const L = Math.hypot(dx, dy);
+    segLens.push(L);
+    total += L;
+  }
+  if (total <= 0) return pts[0];
+  let target = frac * total;
+  let accum = 0;
+  for (let i = 0; i < segLens.length; i++) {
+    if (accum + segLens[i] >= target) {
+      const t = segLens[i] > 0 ? (target - accum) / segLens[i] : 0;
+      return [
+        pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t,
+        pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t,
+      ];
+    }
+    accum += segLens[i];
+  }
+  return pts[pts.length - 1];
+}
+
+function endpointAnchors(path, stroke) {
+  const ends = [path[0], path[path.length - 1]];
+  return ends.map(([la, lo]) => {
+    const [x, y] = latLonToSvg(la, lo);
+    return '<g class="endpoint">' +
+      '<polygon points="' +
+        (x - 6) + "," + (y - 14) + " " +
+        (x + 6) + "," + (y - 14) + " " +
+        x + "," + (y - 4) +
+      '" fill="' + stroke + '" stroke="rgba(0,0,0,0.5)" stroke-width="0.8" />' +
+      '<circle cx="' + x + '" cy="' + y + '" r="2.5" fill="' + stroke + '" />' +
+      '</g>';
+  });
+}
+
+// ============================================================
+//  Pick mode (Ship 3) — endpoint picking with road-bloom
+// ============================================================
+// State for pick-mode. Generalized to support multiple "targets" — what
+// gets committed when the user clicks. Today's targets:
+//   - "barrier_endpoint" (Ship 3): writes to barriers[i].endpoints.{east|west}
+//                                  scope ∈ {east, west, both}
+//                                  barrierIdx is the array index
+//   - "epicenter" (Ship 5): writes to contamination.sources.epicenter
+//                            scope is unused; just a single click commits
+//                            and exits pick mode
+// Adding a new target later (e.g. region centers) means adding a case
+// in startPickMode + onPickClick + finalizePick — no other rework needed.
+// Test/debug accessor — exposes STATE on window for Playwright. Production
+// code should never read window.__cartoState; it's purely a probe.
+const PICK_dummy_for_export = "see __cartoState below";
+const PICK = {
+  active: false,
+  target: null,           // "barrier_endpoint" | "epicenter"
+  scope: null,            // for barrier targets
+  barrierIdx: -1,         // for barrier targets
+  step: null,             // current sub-step (east/west for barrier-both)
+  lastSnap: null,         // last snap result (latlon + node info)
+  dwellTimer: null,
+  pendingPreview: null,
+  // For epicenter, snapping to OSM road graph isn't meaningful — we want
+  // free placement at any lat/lon. snap_to_roads controls that.
+  snap_to_roads: true,
+};
+
+async function ensureRoadsLoaded() {
+  // Load roads-vector once per session per project. Used for client-side
+  // snap-distance calculations and the road-bloom SVG.
+  if (!STATE.project) return;
+  if (STATE.roads && STATE.roads.__project === STATE.project) return;
+  try {
+    const res = await fetch("/api/roads-vector/" + STATE.project);
+    if (!res.ok) {
+      console.warn("roads-vector fetch failed:", res.status);
+      return;
+    }
+    const data = await res.json();
+    data.__project = STATE.project;
+    // Pre-flatten to a single array of {lat, lon} road-graph points so
+    // the snap distance computation is one tight loop.
+    const allPoints = [];
+    for (const r of data.routes || []) {
+      for (const seg of r.segments || []) {
+        for (const [la, lo] of seg) {
+          allPoints.push([la, lo]);
+        }
+      }
+    }
+    data.__points = allPoints;
+    STATE.roads = data;
+    renderRoadBloom();
+  } catch (e) {
+    console.warn("roads-vector fetch error:", e);
+  }
+}
+
+function renderRoadBloom() {
+  // Draw all road segments into the road-bloom SVG with stroke-dasharray
+  // sized to each segment's length. Each segment's transition-delay is
+  // computed from its bounding-box centroid distance to the canvas edge —
+  // edge segments fire at 80ms, center segments at 280ms, per design spec.
+  const svg = qs("#roadBloomSvg");
+  svg.innerHTML = "";
+  if (!STATE.roads || !STATE.info) return;
+  const w = STATE.info.canvas_w;
+  const h = STATE.info.canvas_h;
+  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+
+  const minDim = Math.min(w, h);
+  const out = [];
+
+  for (const r of STATE.roads.routes || []) {
+    for (const seg of r.segments || []) {
+      if (seg.length < 2) continue;
+      // Project + measure cumulative length
+      let pts = "";
+      let total = 0;
+      let cxs = 0, cys = 0, n = 0;
+      let prev = null;
+      for (const [la, lo] of seg) {
+        const [x, y] = latLonToSvg(la, lo);
+        pts += (n ? " " : "") + x.toFixed(1) + "," + y.toFixed(1);
+        if (prev) {
+          const dx = x - prev[0], dy = y - prev[1];
+          total += Math.hypot(dx, dy);
+        }
+        cxs += x; cys += y;
+        prev = [x, y];
+        n++;
+      }
+      if (total < 2) continue;
+      // Centroid → distance to nearest canvas edge → normalized 0..0.5
+      const cx = cxs / n, cy = cys / n;
+      const edgeDist = Math.min(cx, cy, w - cx, h - cy);
+      const edgeDistNorm = Math.max(0, Math.min(0.5, edgeDist / minDim));
+      const delay = (80 + edgeDistNorm * 280 * 2);  // 80ms..360ms range
+      const len = Math.ceil(total) + 2;
+      out.push(
+        '<polyline class="road-bloom-stroke" points="' + pts + '" ' +
+        'style="stroke-dasharray:' + len +
+        ';stroke-dashoffset:' + len +
+        ';transition-delay:' + delay.toFixed(0) + 'ms,' + delay.toFixed(0) + 'ms" />'
+      );
+    }
+  }
+  svg.innerHTML = out.join("");
+}
+
+function startPickMode(opts) {
+  // Generalized engage. opts shape:
+  //   barrier endpoint:  {target:"barrier_endpoint", barrierIdx, scope}
+  //   epicenter:         {target:"epicenter"}
+  // Backward-compat: positional args (barrierIdx, scope) still work.
+  if (typeof opts === "number") {
+    opts = { target: "barrier_endpoint", barrierIdx: opts,
+             scope: arguments[1] };
+  }
+  if (PICK.active) cancelPickMode();
+  if (!STATE.cfg || !STATE.info) return;
+
+  PICK.active = true;
+  PICK.target = opts.target;
+  PICK.lastSnap = null;
+
+  if (opts.target === "barrier_endpoint") {
+    const barriers = STATE.cfg.barriers || [];
+    if (opts.barrierIdx < 0 || opts.barrierIdx >= barriers.length) return;
+    PICK.scope = opts.scope;
+    PICK.barrierIdx = opts.barrierIdx;
+    PICK.step = opts.scope === "both" ? "east" : opts.scope;
+    PICK.snap_to_roads = true;
+  } else if (opts.target === "epicenter") {
+    PICK.scope = null;
+    PICK.barrierIdx = -1;
+    PICK.step = null;
+    // Epicenter is a free-placement marker — anywhere is valid (it's a
+    // weighting reference point, not a road-bound feature). Disable
+    // snap-to-roads so the user gets exact lat/lon at the cursor.
+    PICK.snap_to_roads = false;
+  }
+
+  // Visual engage
+  qs("#canvasStage").classList.add("is-pickmode");
+  qs("#canvasMatte").classList.add("is-active");
+  qs("#pickModeBanner").hidden = false;
+  qs("#pickModeBanner").classList.add("is-idle");
+  if (opts.target === "barrier_endpoint") {
+    setBannerLabel(PICK.step);
+    setBannerPrompt("Click a road to set position");
+  } else if (opts.target === "epicenter") {
+    setBannerLabel("EPICENTER");
+    setBannerPrompt("Click anywhere to set the contamination weighting epicenter");
+  }
+  setBannerSnap("");
+
+  // Wire up canvas mouse handlers
+  const stage = qs("#canvasStage");
+  stage.addEventListener("mousemove", onPickMouseMove);
+  stage.addEventListener("click", onPickClick);
+  stage.addEventListener("mouseleave", onPickMouseLeave);
+  document.addEventListener("keydown", onPickKey);
+
+  // Dwell timer — pulses the brass strip if the user idles for 30s
+  scheduleDwell();
+}
+
+function cancelPickMode() {
+  if (!PICK.active) return;
+  PICK.active = false;
+
+  qs("#canvasStage").classList.remove("is-pickmode");
+  qs("#canvasMatte").classList.remove("is-active");
+  qs("#pickModeBanner").hidden = true;
+  qs("#cursorReadout").classList.remove("is-visible");
+
+  // Clear any snap candidate + ghost-class on prior anchors
+  const overlaySvg = qs("#overlaySvg");
+  const sc = overlaySvg.querySelector(".snap-candidate");
+  if (sc) sc.remove();
+  for (const a of overlaySvg.querySelectorAll(".endpoint-anchor--ghosting")) {
+    a.classList.remove("endpoint-anchor--ghosting");
+  }
+
+  const stage = qs("#canvasStage");
+  stage.removeEventListener("mousemove", onPickMouseMove);
+  stage.removeEventListener("click", onPickClick);
+  stage.removeEventListener("mouseleave", onPickMouseLeave);
+  document.removeEventListener("keydown", onPickKey);
+
+  if (PICK.dwellTimer) clearTimeout(PICK.dwellTimer);
+  PICK.dwellTimer = null;
+  PICK.barrierIdx = -1;
+  PICK.scope = null;
+  PICK.step = null;
+  PICK.lastSnap = null;
+  if (PICK.pendingPreview) PICK.pendingPreview = null;
+}
+
+function setBannerLabel(step) {
+  // Pre-defined labels for common pick targets; arbitrary step strings
+  // pass through verbatim (so PICK targets can use any label they want).
+  const presets = { east: "EAST", west: "WEST", both: "ENDPOINT" };
+  qs("#pickModeLabel").textContent = presets[step] || step || "ENDPOINT";
+}
+function setBannerPrompt(text) {
+  qs("#pickModePromptText").textContent = text;
+}
+function setBannerSnap(html) {
+  qs("#pickModeSnapInfo").innerHTML = html || "";
+}
+
+function scheduleDwell() {
+  if (PICK.dwellTimer) clearTimeout(PICK.dwellTimer);
+  PICK.dwellTimer = setTimeout(() => {
+    if (PICK.active) qs("#pickModeBanner").classList.add("is-idle");
+  }, 30000);
+}
+
+// Convert canvas event coordinates → canvas-pixel space (the SVG viewBox
+// space). The canvasImg is rendered at display-size; we map back to its
+// natural dimensions.
+function eventToCanvasPx(e) {
+  const img = qs("#canvasImg");
+  const rect = img.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return [0, 0];
+  const sx = (e.clientX - rect.left) / rect.width;   // 0..1
+  const sy = (e.clientY - rect.top) / rect.height;
+  if (sx < 0 || sx > 1 || sy < 0 || sy > 1) return [null, null];
+  const w = STATE.info.canvas_w, h = STATE.info.canvas_h;
+  return [sx * w, sy * h];
+}
+
+// Inverse of latLonToSvg: canvas-pixel → lat/lon
+function canvasPxToLatLon(x, y) {
+  const b = STATE.info.bounds || {};
+  const border = STATE.info.border || 0;
+  const tw = STATE.info.terrain_w || 0;
+  const th = STATE.info.terrain_h || 0;
+  const lon = b.lon_w + ((x - border) / tw) * (b.lon_e - b.lon_w);
+  const lat = b.lat_n - ((y - border) / th) * (b.lat_n - b.lat_s);
+  return [lat, lon];
+}
+
+// Compute distance from cursor (in canvas-pixel space) to nearest road
+// graph point. Returns {x, y, lat, lon, distance_px} or null. The "px"
+// here is canvas-pixel space (same coords as SVG viewBox).
+function nearestRoadPoint(cx, cy) {
+  if (!STATE.roads || !STATE.roads.__points) return null;
+  let best = null, bestD = Infinity;
+  // Approx: iterate all points. With ~250k points this is fast enough
+  // for mousemove (~5-15ms in modern browsers).
+  for (const [la, lo] of STATE.roads.__points) {
+    const [x, y] = latLonToSvg(la, lo);
+    const d2 = (x - cx) ** 2 + (y - cy) ** 2;
+    if (d2 < bestD) {
+      bestD = d2;
+      best = [x, y, la, lo];
+    }
+  }
+  if (!best) return null;
+  return { x: best[0], y: best[1], lat: best[2], lon: best[3],
+           distance_px: Math.sqrt(bestD) };
+}
+
+let _snapDebounce = null;
+
+function onPickMouseMove(e) {
+  if (!PICK.active) return;
+  const banner = qs("#pickModeBanner");
+  banner.classList.remove("is-idle");
+  scheduleDwell();
+  const [cx, cy] = eventToCanvasPx(e);
+  if (cx === null) return;
+
+  // Cursor readout — instantaneous lat/lon at cursor
+  const [lat, lon] = canvasPxToLatLon(cx, cy);
+  const readout = qs("#cursorReadout");
+  readout.style.left = e.clientX + "px";
+  readout.style.top = e.clientY + "px";
+  readout.classList.add("is-visible");
+  readout.textContent =
+    lat.toFixed(3) + "°N · " + lon.toFixed(3) + "°W";
+
+  // Cache cursor position for free-placement targets (e.g. epicenter)
+  PICK.cursor = { lat, lon, cx, cy };
+
+  // Free-placement targets skip the road-snap entirely — the click
+  // commits to PICK.cursor.lat/lon directly.
+  if (!PICK.snap_to_roads) {
+    setBannerSnap(
+      '<b>' + lat.toFixed(3) + '°N · ' + lon.toFixed(3) + '°W</b>' +
+      ' · click anywhere to commit'
+    );
+    return;
+  }
+
+  // Snap radius (in canvas pixels). Tuned so a 1848-wide canvas snaps
+  // within ~24 px of the cursor. Scale slightly with canvas dim.
+  const scale = STATE.info.canvas_w / 1848;
+  const SNAP_R = 24 * scale;
+  const ENGAGE_R = 8 * scale;
+
+  const np = nearestRoadPoint(cx, cy);
+  // Update the snap-candidate dot
+  const overlaySvg = qs("#overlaySvg");
+  let sc = overlaySvg.querySelector(".snap-candidate");
+  if (!np || np.distance_px > SNAP_R) {
+    if (sc) sc.remove();
+    PICK.lastSnap = null;
+    setBannerSnap("");
+    return;
+  }
+  if (!sc) {
+    sc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    sc.setAttribute("class", "snap-candidate snap-candidate--breathing");
+    sc.setAttribute("r", "5");
+    overlaySvg.appendChild(sc);
+  }
+  sc.setAttribute("cx", np.x.toFixed(1));
+  sc.setAttribute("cy", np.y.toFixed(1));
+  if (np.distance_px <= ENGAGE_R) {
+    sc.classList.add("snap-candidate--locked");
+    sc.classList.remove("snap-candidate--breathing");
+  } else {
+    sc.classList.remove("snap-candidate--locked");
+    sc.classList.add("snap-candidate--breathing");
+  }
+
+  // Banner snap context (debounced to ~80ms — server-side snap call)
+  if (_snapDebounce) clearTimeout(_snapDebounce);
+  _snapDebounce = setTimeout(() => fetchSnapContext(np.lat, np.lon), 80);
+}
+
+async function fetchSnapContext(lat, lon) {
+  if (!PICK.active || !STATE.project) return;
+  try {
+    const res = await fetch("/api/snap/" + STATE.project, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lon }),
+    });
+    if (!res.ok) return;
+    const snap = await res.json();
+    PICK.lastSnap = snap;
+    // Mark snap-candidate amber if disconnected
+    const sc = qs("#overlaySvg").querySelector(".snap-candidate");
+    if (sc) {
+      if (!snap.in_main_component) sc.classList.add("snap-candidate--disconnected");
+      else sc.classList.remove("snap-candidate--disconnected");
+    }
+    // Update banner snap context
+    const id = snap.node_id;
+    const compStr = snap.in_main_component
+      ? `<b>main component</b>`
+      : `<em>⚠ disconnected (${snap.component_size} nodes) — pipeline will reroute</em>`;
+    setBannerSnap(
+      escapeHtml(snap.snapped_lat.toFixed(3)) + "°N · " +
+      escapeHtml(snap.snapped_lon.toFixed(3)) + "°W · OSM " +
+      escapeHtml(String(id)) + " · " + compStr
+    );
+  } catch (e) {
+    /* ignore — pure UI affordance */
+  }
+}
+
+function onPickMouseLeave() {
+  qs("#cursorReadout").classList.remove("is-visible");
+  const sc = qs("#overlaySvg").querySelector(".snap-candidate");
+  if (sc) sc.remove();
+  setBannerSnap("");
+}
+
+function onPickKey(e) {
+  if (e.key === "Escape" && PICK.active) {
+    const esc = qs("#pickModeEsc");
+    esc.classList.add("is-pressed");
+    setTimeout(() => esc.classList.remove("is-pressed"), 220);
+    cancelPickMode();
+  }
+}
+
+function onPickClick(e) {
+  if (!PICK.active) return;
+
+  if (PICK.target === "barrier_endpoint") {
+    if (!PICK.lastSnap) return;   // no snap candidate engaged
+    const snap = PICK.lastSnap;
+    const barrierIdx = PICK.barrierIdx;
+    const step = PICK.step;
+
+    const path = `barriers[${barrierIdx}].endpoints.${step}`;
+    setByPath(STATE.cfg, path + ".lat", snap.snapped_lat);
+    setByPath(STATE.cfg, path + ".lon", snap.snapped_lon);
+
+    // Drop animation: append a temporary anchor with --committing then
+    // reflow + remove the class to trigger the transition.
+    const overlaySvg = qs("#overlaySvg");
+    const [ax, ay] = latLonToSvg(snap.snapped_lat, snap.snapped_lon);
+    const barrierColor = stylColorRGB(
+      (STATE.cfg.barriers[barrierIdx] || {}).style);
+    const anchor = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    anchor.setAttribute("class", "endpoint-anchor endpoint-anchor--committing");
+    anchor.innerHTML =
+      '<polygon points="' +
+        (ax - 6) + "," + (ay - 14) + " " +
+        (ax + 6) + "," + (ay - 14) + " " +
+        ax + "," + (ay - 4) +
+      '" fill="' + barrierColor + '" stroke="rgba(0,0,0,0.5)" stroke-width="0.8" />' +
+      '<circle cx="' + ax + '" cy="' + ay + '" r="2.5" fill="' + barrierColor + '" />';
+    overlaySvg.appendChild(anchor);
+    void anchor.getBoundingClientRect();
+    anchor.classList.remove("endpoint-anchor--committing");
+
+    if (PICK.scope === "both" && step === "east") {
+      PICK.step = "west";
+      PICK.lastSnap = null;
+      swapBannerToStep("west");
+      setTimeout(() => anchor.classList.add("endpoint-anchor--ghosting"), 200);
+    } else {
+      finalizePick();
+    }
+    markDirty();
+    return;
+  }
+
+  if (PICK.target === "epicenter") {
+    // Free placement — use the cursor's lat/lon directly. The mousemove
+    // handler stores the most recent cursor position in PICK.cursor.
+    const c = PICK.cursor;
+    if (!c) return;
+    setByPath(STATE.cfg, "contamination.sources.epicenter.lat", c.lat);
+    setByPath(STATE.cfg, "contamination.sources.epicenter.lon", c.lon);
+    setBannerPrompt("Epicenter set");
+    setTimeout(() => {
+      cancelPickMode();
+    }, 500);
+    markDirty();
+    return;
+  }
+}
+
+function swapBannerToStep(step) {
+  const prompt = qs("#pickModePrompt");
+  prompt.classList.add("is-swapping");
+  setTimeout(() => {
+    setBannerLabel(step);
+    setBannerPrompt("Click a road to set position");
+    setBannerSnap("");
+    prompt.classList.remove("is-swapping");
+  }, 80);
+}
+
+async function finalizePick() {
+  setBannerPrompt("Computing path…");
+  setBannerSnap("");
+  const idx = PICK.barrierIdx;
+  // Run the dry-run preview server-side. After it returns, exit pick-mode
+  // and re-render the SVG overlay with the committed barrier path.
+  try {
+    const res = await fetch("/api/barrier-preview/" + STATE.project, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ barrier_index: idx }),
+    });
+    const data = await res.json();
+    if (data.warnings && data.warnings.length) {
+      setBannerPrompt("⚠ " + data.warnings[0]);
+      // Brief hold before exit so user can read the warning
+      setTimeout(cancelPickMode, 1800);
+    } else {
+      setBannerPrompt("✓ " + (data.path?.length || 0) +
+                      " points · " + (data.length_km || 0) + " km");
+      setTimeout(() => {
+        cancelPickMode();
+        // Re-fetch barrier-paths so the overlay updates with the
+        // new geometry (committed endpoints will produce a new path).
+        if (STATE.project) {
+          fetch("/api/barrier-paths/" + STATE.project)
+            .then(r => r.ok ? r.json() : null)
+            .then(p => { STATE.paths = p; render(); });
+        }
+      }, 1000);
+    }
+  } catch (e) {
+    setBannerPrompt("✗ preview failed: " + (e.message || String(e)));
+    setTimeout(cancelPickMode, 1800);
+  }
+}
+
+// ============================================================
+//  Init
+// ============================================================
+// ============================================================
+//  Build pill — surfaces save state + render trigger (Polish)
+// ============================================================
+// Map of save-status states → build-pill states. The build pill is the
+// authoritative top-level affordance; the inspector save-status dot
+// remains as a secondary, more detailed indicator.
+const BUILD_STATE_FROM_SAVE = {
+  idle:   "ready",       // nothing pending
+  saved:  "stale",       // saved to disk but render is now stale
+  dirty:  "dirty",       // unsaved edits in flight
+  saving: "dirty",       // mid-PUT
+  error:  "error",       // save failed
+};
+
+function setBuildState(state, label, opts) {
+  const pill = qs("#buildPill");
+  if (!pill) return;
+  pill.setAttribute("data-build", state);
+  qs("#buildPillLabel").textContent = label;
+  // Stage staleness — pass via opts.stages = ['terrain', 'canvas', 'final']
+  // listing which to mark stale.
+  if (opts && opts.stages !== undefined) {
+    const stales = new Set(opts.stages || []);
+    for (const el of pill.querySelectorAll(".build-pill__stage")) {
+      el.classList.toggle("is-stale", stales.has(el.dataset.stage));
+    }
+  }
+  const btn = qs("#renderBtn");
+  if (btn) btn.disabled = (state === "rendering");
+}
+
+// Hook the existing save-status updates to also drive the build pill.
+// The original setSaveStatus only writes to #saveStatus DOM; we wrap it
+// to additionally update the build pill.
+const __origSetSaveStatus = (typeof setSaveStatus !== "undefined")
+  ? setSaveStatus : null;
+function pillFromSave() {
+  const ss = document.querySelector("#saveStatus");
+  if (!ss) return;
+  const state = ss.dataset.state || "idle";
+  const buildState = BUILD_STATE_FROM_SAVE[state] || "ready";
+  // Once the user starts editing, mark all stages stale (a save means
+  // the next render will rebuild stage 4 minimum; for terrain/barrier
+  // edits, deeper stages too — being conservative is honest).
+  let label = "READY";
+  let stales = [];
+  if (state === "dirty" || state === "saving") {
+    label = state === "saving" ? "SAVING…" : "DIRTY";
+    stales = ["terrain", "canvas", "final"];
+  } else if (state === "saved") {
+    label = "STALE · NEEDS RENDER";
+    stales = ["terrain", "canvas", "final"];
+  } else if (state === "error") {
+    label = "SAVE FAILED";
+  }
+  setBuildState(buildState, label, { stages: stales });
+}
+
+// Patch markDirty + the save-status setter so updates flow through.
+const __pillObserver = new MutationObserver(() => pillFromSave());
+const __ssEl = document.getElementById("saveStatus");
+if (__ssEl) {
+  __pillObserver.observe(__ssEl,
+    { attributes: true, attributeFilter: ["data-state"] });
+}
+
+// Render via the async queue: POST returns a job_id, then poll status.
+// The build pill shows stage-by-stage progress (terrain → canvas → final).
+let __renderPollTimer = null;
+
+async function triggerRender() {
+  if (!STATE.project) return;
+  if (__renderPollTimer) {
+    clearTimeout(__renderPollTimer);
+    __renderPollTimer = null;
+  }
+  setBuildState("rendering", "QUEUEING…");
+  try {
+    const res = await fetch("/api/render-queue/" + STATE.project, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scale: 1, format: "jpg", quality: 88 }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn("render-queue failed:", res.status, text.slice(0, 200));
+      setBuildState("error", "QUEUE FAILED");
+      return;
+    }
+    const { job_id } = await res.json();
+    pollRenderStatus(job_id);
+  } catch (e) {
+    console.warn("render error:", e);
+    setBuildState("error", "RENDER FAILED");
+  }
+}
+
+// Map of pipeline stage labels to their display names. The build pill's
+// 3-notch indicator covers terrain/canvas/final; we mark a notch
+// "active" when its corresponding stage transitions to in-progress.
+const STAGE_DISPLAY = {
+  terrain_dem:    { label: "DEM",      pillStage: "terrain" },
+  terrain_styled: { label: "TERRAIN",  pillStage: "terrain" },
+  canvas_roads:   { label: "CANVAS",   pillStage: "canvas" },
+  final:          { label: "LABELS",   pillStage: "final" },
+};
+
+async function pollRenderStatus(job_id) {
+  try {
+    const res = await fetch("/api/render-status/" + job_id);
+    if (!res.ok) {
+      setBuildState("error", "STATUS FAILED");
+      return;
+    }
+    const status = await res.json();
+    if (status.state === "queued") {
+      setBuildState("rendering", "QUEUED…");
+    } else if (status.state === "running") {
+      // Find the LAST stage event and use its name as the current label.
+      const stages = status.stages || [];
+      const last = stages[stages.length - 1];
+      let lbl = "RENDERING…";
+      let stales = ["terrain", "canvas", "final"];
+      if (last) {
+        const sd = STAGE_DISPLAY[last.stage];
+        if (sd) {
+          // Mark stages already past as no-longer-stale (they hit cache or completed)
+          // Build an ordered list of pillStage labels seen so far.
+          const seen = new Set();
+          for (const s of stages) {
+            const dd = STAGE_DISPLAY[s.stage];
+            if (dd) seen.add(dd.pillStage);
+          }
+          // If we've seen "terrain", remove it from stales (it's settled);
+          // similarly for canvas. The CURRENT stage stays stale until done.
+          const currentPill = sd.pillStage;
+          stales = ["terrain", "canvas", "final"].filter(p => {
+            // Stage is "still stale" if we haven't seen anything beyond it
+            const order = { terrain: 0, canvas: 1, final: 2 };
+            return order[p] >= order[currentPill];
+          });
+          lbl = sd.label + " · " + (last.type === "hit" ? "CACHED" : "BUILDING…");
+        }
+      }
+      setBuildState("rendering", lbl, { stages: stales });
+    } else if (status.state === "done") {
+      const r = status.result || {};
+      // Refresh canvas image
+      const img = qs("#canvasImg");
+      const empty = qs("#canvasEmpty");
+      const frame = qs("#canvasFrame");
+      const previewRes = await fetch(
+        "/api/stage-preview/" + STATE.project + "/canvas").catch(() => null);
+      if (previewRes && previewRes.ok) {
+        const j = await previewRes.json();
+        STATE.preview = j;
+        if (empty) empty.hidden = true;
+        if (frame) frame.hidden = false;
+        if (img) img.src = j.url;
+      } else if (r.url && img) {
+        STATE.preview = { url: r.url };
+        if (empty) empty.hidden = true;
+        if (frame) frame.hidden = false;
+        img.src = r.url;
+      }
+      // Re-fetch barrier paths in case geometry changed.
+      if (STATE.project) {
+        fetch("/api/barrier-paths/" + STATE.project)
+          .then(r => r.ok ? r.json() : null)
+          .then(p => { if (p) { STATE.paths = p; render(); } });
+      }
+      const ms = (r.render_ms || status.elapsed_ms || 0);
+      setBuildState("ready", "READY · " + ms + "MS", { stages: [] });
+      setTimeout(() => setBuildState("ready", "READY", { stages: [] }), 4000);
+      __renderPollTimer = null;
+      return;   // stop polling
+    } else if (status.state === "error") {
+      console.warn("render error:", status.error);
+      setBuildState("error", "RENDER FAILED");
+      __renderPollTimer = null;
+      return;
+    }
+    // Still in flight — poll again. Use 600ms cadence: fast enough that
+    // stage transitions feel live, slow enough to not hammer the server.
+    __renderPollTimer = setTimeout(() => pollRenderStatus(job_id), 600);
+  } catch (e) {
+    console.warn("poll error:", e);
+    setBuildState("error", "POLL FAILED");
+    __renderPollTimer = null;
+  }
+}
+
+// Empty-state render button: same as the topbar render button.
+function wireEmptyStateRender() {
+  const btn = document.getElementById("emptyStateRenderBtn");
+  if (btn && !btn.dataset.wired) {
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", triggerRender);
+  }
+}
+
+// Wire the topbar render button — runs once on init.
+function wireRenderBtn() {
+  const btn = qs("#renderBtn");
+  if (btn && !btn.dataset.wired) {
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", triggerRender);
+  }
+}
+
+// Trigger the staggered page-load reveal as soon as DOM is ready.
+// Two-frame double-rAF pattern ensures the initial transform/opacity
+// state is committed BEFORE the .has-loaded class is added — without
+// the double-rAF, the browser may collapse them into a single frame
+// and skip the animation entirely.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    document.body.classList.add("has-loaded");
+  });
+});
+
+// Expose minimal probes for Playwright tests. Avoid leaking the whole
+// STATE — just the fields tests need to assert on.
+window.__cartoState = () => ({
+  project: STATE.project,
+  has_paths: !!STATE.paths,
+  has_roads: !!(STATE.roads && STATE.roads.__points),
+  has_contam_sources: !!(STATE.contam_sources &&
+                          STATE.contam_sources.sources),
+  contam_sources_count: STATE.contam_sources
+    ? (STATE.contam_sources.sources || []).length : 0,
+  pick_active: PICK.active,
+  pick_target: PICK.target,
+  contamTab: __contamTab,
+});
+loadInitial();
+
+// Hot-rebind nav clicks (vanilla approach matching sibling pages)
+for (const a of document.querySelectorAll(".mode")) {
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    const route = a.getAttribute("data-route");
+    if (route) location.href = route + (STATE.project ? "?project=" + STATE.project : "");
+  });
+}
+</script>
+
+</body>
+</html>

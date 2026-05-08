@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cartograph — Routes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink:        #13100b;
+  --ink-1:      #181410;
+  --ink-2:      #1f1a14;
+  --ink-3:      #261f18;
+  --rule:       #2d2620;
+  --rule-2:     #3a3127;
+
+  --bone:       #ded2ba;
+  --bone-2:     #c2b699;
+  --bone-dim:   #8b8270;
+  --bone-faint: #5b5448;
+
+  --brass:        #b88a3c;
+  --brass-bright: #e0b160;
+  --brass-deep:   #7a5a23;
+
+  --blood:      #8a3a30;
+  --leaf:       #6b8033;
+
+  --serif: "Fraunces", "Times New Roman", serif;
+  --mono:  "IBM Plex Mono", ui-monospace, "Menlo", monospace;
+
+  --rail-r: 380px;
+  --top:    52px;
+  --bot:    26px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* film grain */
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* ------------- topbar ------------- */
+.topbar {
+  height: var(--top);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink-1);
+  position: relative; z-index: 10;
+}
+.brand {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  border-right: 1px solid var(--rule);
+}
+.brand__mark {
+  width: 26px; height: 26px;
+  border: 1px solid var(--brass);
+  display: grid; place-items: center;
+  font-family: var(--serif); font-size: 13px;
+  color: var(--brass-bright);
+  font-style: italic;
+}
+.brand__name {
+  font-family: var(--mono); font-weight: 500;
+  letter-spacing: 0.32em; font-size: 11px; color: var(--bone);
+}
+.brand__name em {
+  color: var(--bone-faint); font-style: normal; margin-left: 6px;
+}
+
+.modes {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 0; justify-self: start;
+}
+.modes__sep {
+  width: 1px; height: 14px; background: var(--rule-2); margin: 0 14px;
+  align-self: center;
+}
+.mode {
+  background: none; border: none; color: var(--bone-dim);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
+  padding: 6px 14px; text-transform: uppercase;
+  position: relative; cursor: pointer;
+  text-decoration: none;
+}
+.mode:hover { color: var(--bone-2); }
+.mode[aria-disabled="true"] {
+  color: var(--bone-faint); opacity: 0.45; cursor: not-allowed;
+  font-style: italic;
+}
+.mode[aria-disabled="true"]:hover { color: var(--bone-faint); }
+.mode.is-active { color: var(--brass-bright); }
+.mode.is-active::after {
+  content: "";
+  position: absolute; bottom: -1px; left: 14px; right: 14px;
+  height: 2px; background: var(--brass);
+}
+.mode__num {
+  display: inline-block; opacity: 0.55; margin-right: 8px; font-size: 9.5px;
+  color: var(--bone-faint);
+}
+.mode.is-active .mode__num { color: var(--brass-deep); opacity: 1; }
+
+/* project switcher */
+.project {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 14px; border-left: 1px solid var(--rule);
+  position: relative;
+}
+.project-switcher {
+  background: none; border: 1px solid var(--rule-2); color: var(--bone);
+  padding: 6px 12px; cursor: pointer; min-width: 220px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  text-transform: uppercase; text-align: left;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.project-switcher:hover { border-color: var(--brass-deep); color: var(--brass-bright); }
+.project-switcher__caret { color: var(--bone-faint); font-size: 9px; }
+.dropdown {
+  position: absolute; top: calc(100% - 1px); right: 18px;
+  min-width: 240px; max-width: 320px;
+  background: var(--ink-1); border: 1px solid var(--rule-2);
+  display: flex; flex-direction: column;
+  z-index: 20;
+}
+.dropdown[hidden] { display: none; }
+.dropdown__item {
+  background: none; border: none; color: var(--bone-dim);
+  text-align: left; padding: 9px 14px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; border-bottom: 1px solid var(--rule);
+}
+.dropdown__item:hover { background: var(--ink-2); color: var(--bone); }
+.dropdown__item.is-active { color: var(--brass-bright); }
+.dropdown__item:last-child { border-bottom: none; }
+.online {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.online .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--bone-faint); display: inline-block;
+}
+.online.is-online .dot { background: var(--leaf); }
+.online.is-error  .dot { background: var(--blood); }
+
+/* ------------- main ------------- */
+main.canvas {
+  display: grid;
+  grid-template-columns: 1fr var(--rail-r);
+  height: calc(100vh - var(--top) - var(--bot));
+}
+
+/* canvas plate (read-only preview of cached canvas stage) */
+.canvas-section {
+  position: relative;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(ellipse at center, rgba(255,200,140,0.04) 0%, transparent 60%),
+    var(--ink);
+  overflow: hidden;
+  padding: 36px;
+}
+.plate-wrap { position: relative; max-width: 100%; max-height: 100%; }
+.plate {
+  position: relative;
+  max-width: 100%; max-height: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--ink-2);
+  box-shadow:
+    0 0 0 1px var(--rule),
+    0 22px 44px -16px rgba(0,0,0,0.7);
+}
+.plate img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.plate__caption {
+  position: absolute;
+  bottom: -22px; left: 0;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.plate-mark {
+  position: absolute; width: 16px; height: 16px;
+  border: 1px solid var(--brass-deep);
+  pointer-events: none;
+}
+.plate-mark--tl { top: -1px; left: -1px;  border-right: 0; border-bottom: 0; }
+.plate-mark--tr { top: -1px; right: -1px; border-left: 0;  border-bottom: 0; }
+.plate-mark--bl { bottom: -1px; left: -1px;  border-right: 0; border-top: 0; }
+.plate-mark--br { bottom: -1px; right: -1px; border-left: 0;  border-top: 0; }
+
+/* Zoom HUD — bottom-right of canvas section */
+.zoom-hud {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--ink-1);
+  border: 1px solid var(--rule-2);
+  padding: 4px 6px;
+  z-index: 5;
+  font-family: var(--mono);
+}
+.zoom-hud button {
+  background: none; border: 1px solid var(--rule-2);
+  color: var(--bone-2); cursor: pointer;
+  width: 26px; height: 26px;
+  font-size: 13px; line-height: 1;
+}
+.zoom-hud button:hover { color: var(--brass-bright); border-color: var(--brass-deep); }
+.zoom-readout {
+  min-width: 48px; text-align: center;
+  font-size: 10px; letter-spacing: 0.16em;
+  color: var(--bone-dim);
+}
+.canvas-section { cursor: grab; }
+.canvas-section.is-panning { cursor: grabbing; }
+.plate-wrap { transform-origin: center center; will-change: transform; }
+
+/* ------------- inspector (right rail) ------------- */
+.inspector {
+  border-left: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+.inspector__head {
+  padding: 18px 22px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.inspector__eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 8px;
+}
+.inspector__title {
+  font-family: var(--serif);
+  font-size: 30px; line-height: 1; letter-spacing: -0.005em;
+  font-weight: 400;
+  font-variation-settings: "opsz" 96, "SOFT" 25, "WONK" 1;
+  color: var(--bone); margin: 0 0 6px;
+}
+.inspector__sub {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px; color: var(--bone-dim);
+  font-variation-settings: "SOFT" 50;
+}
+.inspector__body { overflow-y: auto; flex: 1; }
+
+fieldset.section {
+  border: 0; padding: 18px 22px 14px; margin: 0;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
+fieldset.section legend {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-dim);
+  margin-bottom: 14px; padding: 0;
+  width: 100%; display: flex; align-items: center;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 6px 0;
+}
+.row__label {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.row__num {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--bone); text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+}
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 2px; background: var(--rule-2);
+  outline: none; border-radius: 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--brass); cursor: pointer;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--brass-deep);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--brass); cursor: pointer;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--brass-deep);
+}
+
+input[type="text"], select {
+  background: var(--ink-2);
+  border: 1px solid var(--rule-2);
+  color: var(--bone);
+  padding: 6px 10px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+}
+input[type="text"]:focus, select:focus {
+  outline: none; border-color: var(--brass-deep);
+}
+select {
+  -webkit-appearance: none; appearance: none;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><polygon points='0,0 10,0 5,6' fill='%238b8270'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* network chips */
+.chip-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  align-items: center;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: var(--ink-2); border: 1px solid var(--rule-2);
+  color: var(--bone-2);
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.14em;
+}
+.chip__close {
+  background: none; border: none; color: var(--bone-faint);
+  cursor: pointer; padding: 0; font-size: 14px; line-height: 1;
+}
+.chip__close:hover { color: var(--blood); }
+.chip-add {
+  display: flex; gap: 6px; margin-top: 10px;
+}
+.chip-add input {
+  flex: 1; min-width: 0;
+}
+
+/* style cards (each road style) */
+.style-card {
+  background: var(--ink-2);
+  border: 1px solid var(--rule);
+  padding: 14px;
+  margin-bottom: 12px;
+  display: grid; gap: 10px;
+}
+.style-card__head {
+  display: grid; grid-template-columns: 26px 1fr auto;
+  align-items: center; gap: 10px;
+}
+.style-card__swatch {
+  width: 26px; height: 26px;
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+.style-card__name {
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--rule-2);
+  color: var(--bone);
+  font-family: var(--serif); font-size: 16px;
+  font-variation-settings: "opsz" 24, "SOFT" 30;
+  padding: 4px 0;
+  width: 100%;
+}
+.style-card__name:focus {
+  outline: none; border-bottom-color: var(--brass);
+}
+.style-card__delete {
+  background: none; border: 1px solid var(--rule-2);
+  color: var(--bone-faint);
+  width: 26px; height: 26px;
+  cursor: pointer; line-height: 1; font-size: 14px;
+}
+.style-card__delete:hover { border-color: var(--blood); color: var(--blood); }
+
+.triplet {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.triplet__cell {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.triplet__cell label {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.34em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.triplet__cell .row__num { text-align: left; font-size: 11px; min-width: 0; }
+
+/* mask-by-water toggle */
+.toggle {
+  display: inline-flex; align-items: center; gap: 10px;
+  cursor: pointer; user-select: none;
+}
+.toggle__track {
+  width: 32px; height: 18px;
+  background: var(--rule-2); border-radius: 999px;
+  position: relative; transition: background 0.15s;
+}
+.toggle__track::after {
+  content: ""; position: absolute;
+  width: 12px; height: 12px;
+  background: var(--bone-dim); border-radius: 50%;
+  top: 3px; left: 3px;
+  transition: left 0.15s, background 0.15s;
+}
+.toggle.is-on .toggle__track { background: var(--brass-deep); }
+.toggle.is-on .toggle__track::after { left: 17px; background: var(--brass-bright); }
+.toggle__label {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--bone-2);
+}
+
+/* footer */
+.inspector__foot {
+  padding: 14px 22px;
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.btn {
+  background: var(--brass);
+  color: var(--ink);
+  border: 1px solid var(--brass-deep);
+  padding: 9px 16px; cursor: pointer;
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  font-weight: 500;
+  position: relative;
+}
+.btn:hover { background: var(--brass-bright); }
+.btn--ghost {
+  background: transparent;
+  color: var(--bone-2);
+  border: 1px solid var(--rule-2);
+}
+.btn--ghost:hover { color: var(--bone); border-color: var(--bone-faint); }
+.btn--add {
+  width: 100%;
+  background: transparent;
+  color: var(--bone-2);
+  border: 1px dashed var(--rule-2);
+  margin-top: 8px;
+  padding: 10px 12px;
+}
+.btn--add:hover { color: var(--brass-bright); border-color: var(--brass-deep); }
+
+/* statusbar */
+.statusbar {
+  height: var(--bot);
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0 18px;
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--bone-faint);
+  gap: 24px;
+}
+.statusbar b { color: var(--bone-2); font-weight: 500; }
+.statusbar .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brass); display: inline-block; margin-right: 8px;
+}
+
+/* commit-flash on plate when render lands */
+@keyframes commit-flash {
+  0%   { box-shadow: 0 0 0 1px var(--rule),     0 22px 44px -16px rgba(0,0,0,0.7); }
+  50%  { box-shadow: 0 0 0 2px var(--brass-bright), 0 22px 44px -16px rgba(0,0,0,0.7); }
+  100% { box-shadow: 0 0 0 1px var(--rule),     0 22px 44px -16px rgba(0,0,0,0.7); }
+}
+.plate.commit-flash { animation: commit-flash 0.6s ease-out; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark">C</span>
+    <span class="brand__name">CARTOGRAPH <em>DRAFT</em></span>
+  </div>
+
+  <nav class="modes" id="modesNav">
+    <a class="mode" data-route="/setup"><span class="mode__num">01</span>Setup</a>
+    <a class="mode" data-route="/paint"><span class="mode__num">02</span>Terrain</a>
+    <a class="mode" data-route="/place"><span class="mode__num">03</span>Places</a>
+    <a class="mode is-active" data-route="/routes"><span class="mode__num">04</span>Routes</a>
+    <a class="mode" data-route="/narrative"><span class="mode__num">05</span>Narrative</a>
+    <a class="mode" data-route="/decoration"><span class="mode__num">06</span>Decoration</a>
+    <span class="modes__sep"></span>
+    <a class="mode" data-route="/render"><span class="mode__num">07</span>Render</a>
+  </nav>
+
+  <div class="project">
+    <button class="project-switcher" id="projectSwitcher" aria-haspopup="true" aria-expanded="false">
+      <span id="projectName">jersea-wastes</span>
+      <span class="project-switcher__caret">▼</span>
+    </button>
+    <div class="dropdown" id="projectDropdown" hidden></div>
+    <span class="online" id="onlineIndicator"><span class="dot"></span><span id="onlineLabel">offline</span></span>
+  </div>
+</header>
+
+<main class="canvas">
+  <!-- LEFT: read-only canvas-stage preview -->
+  <section class="canvas-section" id="canvasSection">
+    <div class="plate-wrap" id="plateWrap">
+      <div class="plate" id="plate">
+        <span class="plate-mark plate-mark--tl"></span>
+        <span class="plate-mark plate-mark--tr"></span>
+        <span class="plate-mark plate-mark--bl"></span>
+        <span class="plate-mark plate-mark--br"></span>
+        <img id="map" alt="full render preview" />
+      </div>
+      <div class="plate__caption" id="plateCaption">final render · scroll to zoom · drag to pan</div>
+    </div>
+    <div class="zoom-hud">
+      <button id="btnZoomOut" title="Zoom out">−</button>
+      <span class="zoom-readout" id="zoomReadout">100%</span>
+      <button id="btnZoomIn" title="Zoom in">+</button>
+      <button id="btnZoomReset" title="Reset (1×)">⊕</button>
+    </div>
+  </section>
+
+  <!-- RIGHT: routes inspector -->
+  <aside class="inspector">
+    <header class="inspector__head">
+      <div class="inspector__eyebrow">Routes · OSM road network</div>
+      <h2 class="inspector__title">Roads</h2>
+      <p class="inspector__sub">Networks fetched from Overpass, then styled by name.</p>
+    </header>
+
+    <div class="inspector__body">
+
+      <fieldset class="section">
+        <legend>Networks
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">OSM <code>network=</code> tags</span>
+        </legend>
+        <div class="chip-row" id="networkChips"></div>
+        <div class="chip-add">
+          <input type="text" id="networkInput" placeholder="e.g. US:I" autocomplete="off" />
+          <button class="btn btn--ghost" id="btnAddNetwork">Add</button>
+        </div>
+        <div style="margin-top: 10px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Each network value is what Overpass matches against. Common: <code>US:I</code> (Interstate), <code>US:US</code> (US highway), <code>US:&lt;state&gt;</code> (state route).
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Styles
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">draw rules</span>
+        </legend>
+        <div id="styleCards"></div>
+        <button class="btn btn--add" id="btnAddStyle">+ Add style</button>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Global
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">shared by all roads</span>
+        </legend>
+
+        <div style="display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: center; padding: 6px 0;">
+          <span class="style-card__swatch" id="swShadow"></span>
+          <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim);">Shadow color</span>
+        </div>
+        <div class="triplet" style="margin-bottom: 14px;">
+          <div class="triplet__cell">
+            <label>R</label>
+            <span class="row__num" id="numShadow_r">—</span>
+            <input type="range" id="rngShadow_r" min="0" max="255" step="1" value="45">
+          </div>
+          <div class="triplet__cell">
+            <label>G</label>
+            <span class="row__num" id="numShadow_g">—</span>
+            <input type="range" id="rngShadow_g" min="0" max="255" step="1" value="38">
+          </div>
+          <div class="triplet__cell">
+            <label>B</label>
+            <span class="row__num" id="numShadow_b">—</span>
+            <input type="range" id="rngShadow_b" min="0" max="255" step="1" value="28">
+          </div>
+        </div>
+
+        <div style="padding: 8px 0;">
+          <label class="toggle" id="maskByWaterToggle">
+            <span class="toggle__track"></span>
+            <span class="toggle__label">Mask by water</span>
+          </label>
+          <div style="margin-top: 6px; padding-left: 42px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+            Roads passing over flooded land disappear instead of bridging the water.
+          </div>
+        </div>
+      </fieldset>
+
+    </div>
+
+    <footer class="inspector__foot">
+      <button class="btn btn--ghost" id="btnRoutesRevert">Revert</button>
+      <button class="btn" id="btnRoutesCommit">Commit to YAML</button>
+    </footer>
+  </aside>
+</main>
+
+<footer class="statusbar">
+  <div>
+    <span class="dot"></span>
+    <span id="renderState">Ready</span>
+  </div>
+  <div></div>
+  <div>
+    <span>config / <b id="statusConfig">jersea-wastes.yaml</b></span>
+    <span>·</span>
+    <span><b id="statusCounts">— networks · — styles</b></span>
+  </div>
+</footer>
+
+<div class="grain"></div>
+
+<script src="/_shared.js"></script>
+<script>
+// -----------------------------------------------------------------------------
+// Routes mode prototype.
+// Edits the `roads:` block of the YAML config:
+//   - networks: string[]              (OSM `network=` tag matches)
+//   - styles: { name: { network, color, width, shadow_width } }
+//   - shadow_color: [r,g,b]
+//   - mask_by_water: bool
+// No canvas overlay — the user sees the rendered roads in the canvas-stage
+// preview (which is regenerated on each commit).
+// -----------------------------------------------------------------------------
+
+let CONFIG_NAME = (new URLSearchParams(location.search).get('project')) || 'jersea-wastes';
+let PROJECT_CONFIG = null;
+let CONFIG_LIST = [];
+let ONLINE = false;
+
+// Working state — mirrors the YAML structure but in a UI-friendly shape.
+// NETWORKS is just a plain string array.
+// STYLES is an array of { id, name, network, color:[r,g,b 0-255], width, shadow_width }
+// because Object.entries on the YAML dict loses iteration order in some
+// renderers and we want add/remove to feel ordered.
+let NETWORKS = [];
+let STYLES = [];
+let SHADOW_COLOR = [45, 38, 28];     // 0-255 RGB
+let MASK_BY_WATER = true;
+let nextStyleId = 1;
+
+// Routes mode shows the FULL render (labels included). Editing road styling
+// in isolation from POIs/labels makes it harder to judge whether the
+// styling reads against the densest part of the map. The label-free canvas
+// stage is reserved for modes that overlay live edits on top.
+const PREVIEW_STAGE = 'final';
+
+async function fetchPreviewUrl(slug, stage = PREVIEW_STAGE) {
+  for (const s of [stage, 'final']) {
+    try {
+      const r = await fetch(`/api/stage-preview/${slug}/${s}`);
+      if (r.ok) return (await r.json()).url;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+// -----------------------------------------------------------------------------
+// YAML ⇄ UI conversion
+// -----------------------------------------------------------------------------
+
+function hydrateFromConfig(cfg) {
+  PROJECT_CONFIG = cfg;
+  const roads = cfg.roads || {};
+  NETWORKS = Array.isArray(roads.networks) ? roads.networks.slice() : [];
+  STYLES = [];
+  nextStyleId = 1;
+  const stylesObj = roads.styles || {};
+  for (const [name, body] of Object.entries(stylesObj)) {
+    if (!body || typeof body !== 'object') continue;
+    STYLES.push({
+      id:           `s${nextStyleId++}`,
+      name,
+      network:      body.network || '',
+      color:        sanitizeRGB(body.color, [180, 160, 110]),
+      width:        Number(body.width || 2),
+      shadow_width: Number(body.shadow_width || 1),
+      // refs is a string[] of OSM ref values (e.g. ["95","295"]). Empty
+      // array = no filter. We coerce to strings so int "95" in YAML still
+      // matches OSM's string ref tags.
+      refs:         Array.isArray(body.refs) ? body.refs.map(String) : [],
+    });
+  }
+  SHADOW_COLOR  = sanitizeRGB(roads.shadow_color, [45, 38, 28]);
+  MASK_BY_WATER = roads.mask_by_water !== false;   // default true
+
+  // Project-level UI sync
+  document.getElementById('projectName').textContent  = CONFIG_NAME;
+  document.getElementById('statusConfig').textContent = `${CONFIG_NAME}.yaml`;
+
+  renderNetworks();
+  renderStyles();
+  renderGlobal();
+  updateCounts();
+}
+
+function sanitizeRGB(v, fallback) {
+  if (!Array.isArray(v) || v.length < 3) return fallback.slice();
+  return [0,1,2].map(i => {
+    const n = Number(v[i]);
+    return Number.isFinite(n) ? Math.max(0, Math.min(255, Math.round(n))) : fallback[i];
+  });
+}
+
+// Build the roads block to PUT. Preserves any roads.* fields the UI doesn't
+// expose (e.g. a future per-style refs filter) by spreading prev first.
+function readRoadsFromControls() {
+  const prev = (PROJECT_CONFIG && PROJECT_CONFIG.roads) || {};
+  const stylesOut = {};
+  for (const s of STYLES) {
+    if (!s.name) continue;     // skip nameless styles; they'd collide on PUT
+    const out = {
+      ...((prev.styles || {})[s.name] || {}),
+      network:      s.network,
+      color:        s.color.slice(),
+      width:        Number(s.width),
+      shadow_width: Number(s.shadow_width),
+    };
+    // Only emit refs when non-empty — keeps the YAML clean for "all routes
+    // in this network" styles. The pipeline treats absent + [] equivalently.
+    if (Array.isArray(s.refs) && s.refs.length > 0) {
+      out.refs = s.refs.slice();
+    } else {
+      delete out.refs;
+    }
+    stylesOut[s.name] = out;
+  }
+  return {
+    ...prev,
+    networks:     NETWORKS.slice(),
+    styles:       stylesOut,
+    shadow_color: SHADOW_COLOR.slice(),
+    mask_by_water: !!MASK_BY_WATER,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Rendering
+// -----------------------------------------------------------------------------
+
+function renderNetworks() {
+  const host = document.getElementById('networkChips');
+  host.innerHTML = '';
+  if (NETWORKS.length === 0) {
+    host.innerHTML = `<span style="font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-faint); font-variation-settings:'SOFT' 50;">No networks — OSM fetch will be skipped.</span>`;
+    return;
+  }
+  for (let i = 0; i < NETWORKS.length; i++) {
+    const net = NETWORKS[i];
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `<span>${escapeHtml(net)}</span>`;
+    const close = document.createElement('button');
+    close.className = 'chip__close';
+    close.type = 'button';
+    close.title = 'Remove';
+    close.textContent = '×';
+    close.addEventListener('click', () => {
+      NETWORKS.splice(i, 1);
+      renderNetworks();
+      updateCounts();
+    });
+    chip.appendChild(close);
+    host.appendChild(chip);
+  }
+}
+
+function renderStyles() {
+  const host = document.getElementById('styleCards');
+  host.innerHTML = '';
+  if (STYLES.length === 0) {
+    host.innerHTML = `<div style="padding: 8px 0; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">No styles defined. Add one to start drawing roads.</div>`;
+    return;
+  }
+  for (const s of STYLES) host.appendChild(buildStyleCard(s));
+}
+
+function buildStyleCard(s) {
+  const card = document.createElement('div');
+  card.className = 'style-card';
+  card.dataset.id = s.id;
+  card.innerHTML = `
+    <div class="style-card__head">
+      <span class="style-card__swatch" id="swStyle_${s.id}"></span>
+      <input class="style-card__name" type="text" data-field="name" value="${escapeHtml(s.name)}" placeholder="style name (e.g. interstate)" />
+      <button type="button" class="style-card__delete" data-action="delete" title="Delete style">×</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 70px 1fr; gap: 10px; align-items: center;">
+      <span class="row__label">Network</span>
+      <select data-field="network" class="style-card__network">
+        ${optionList(NETWORKS, s.network)}
+      </select>
+    </div>
+
+    <div class="triplet">
+      <div class="triplet__cell">
+        <label>R</label>
+        <span class="row__num" id="numStyle_${s.id}_r">—</span>
+        <input type="range" min="0" max="255" step="1" value="${s.color[0]}" data-field="color_r">
+      </div>
+      <div class="triplet__cell">
+        <label>G</label>
+        <span class="row__num" id="numStyle_${s.id}_g">—</span>
+        <input type="range" min="0" max="255" step="1" value="${s.color[1]}" data-field="color_g">
+      </div>
+      <div class="triplet__cell">
+        <label>B</label>
+        <span class="row__num" id="numStyle_${s.id}_b">—</span>
+        <input type="range" min="0" max="255" step="1" value="${s.color[2]}" data-field="color_b">
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="row__label">Width</span>
+      <input type="range" min="1" max="10" step="1" value="${s.width}" data-field="width">
+      <span class="row__num" id="numStyle_${s.id}_w">${s.width}</span>
+    </div>
+    <div class="row">
+      <span class="row__label">Shadow</span>
+      <input type="range" min="0" max="6" step="1" value="${s.shadow_width}" data-field="shadow_width">
+      <span class="row__num" id="numStyle_${s.id}_sw">${s.shadow_width}</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 70px 1fr; gap: 10px; align-items: center;">
+      <span class="row__label">Refs</span>
+      <input type="text" data-field="refs" value="${escapeHtml(s.refs.join(', '))}" placeholder="e.g. 95, 295, 495 (blank = all)" />
+    </div>
+    <div style="font-family: var(--serif); font-style: italic; font-size: 11px; color: var(--bone-faint); font-variation-settings:'SOFT' 50; padding-left: 80px;">
+      Comma-separated OSM ref values. Blank draws every route in this network.
+    </div>
+  `;
+
+  // Bind inputs to the in-memory style row. Use card.querySelector so the
+  // first refresh works while card is still detached (getElementById only
+  // searches the live document tree, not subtrees waiting to be appended).
+  const refresh = () => {
+    card.querySelector(`#swStyle_${s.id}`).style.background = rgbCSS(s.color);
+    card.querySelector(`#numStyle_${s.id}_r`).textContent = String(s.color[0]);
+    card.querySelector(`#numStyle_${s.id}_g`).textContent = String(s.color[1]);
+    card.querySelector(`#numStyle_${s.id}_b`).textContent = String(s.color[2]);
+    card.querySelector(`#numStyle_${s.id}_w`).textContent = String(s.width);
+    card.querySelector(`#numStyle_${s.id}_sw`).textContent = String(s.shadow_width);
+  };
+  refresh();
+
+  card.addEventListener('input', (ev) => {
+    const t = ev.target;
+    const f = t.dataset.field;
+    if (!f) return;
+    if (f === 'name')        s.name = t.value;
+    else if (f === 'network') s.network = t.value;
+    else if (f === 'width')         s.width = Number(t.value);
+    else if (f === 'shadow_width')  s.shadow_width = Number(t.value);
+    else if (f === 'color_r') s.color[0] = Number(t.value);
+    else if (f === 'color_g') s.color[1] = Number(t.value);
+    else if (f === 'color_b') s.color[2] = Number(t.value);
+    else if (f === 'refs') {
+      // Split on commas and whitespace; drop empty tokens. Don't trim
+      // numeric vs alpha — OSM refs include both ("95" but also "I-95").
+      s.refs = t.value.split(/[,\s]+/).map(x => x.trim()).filter(Boolean);
+    }
+    refresh();
+  });
+
+  card.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-action]');
+    if (!btn) return;
+    if (btn.dataset.action === 'delete') {
+      const idx = STYLES.findIndex(x => x.id === s.id);
+      if (idx >= 0) {
+        STYLES.splice(idx, 1);
+        renderStyles();
+        updateCounts();
+      }
+    }
+  });
+
+  return card;
+}
+
+function optionList(networks, selected) {
+  const opts = ['<option value="">— none —</option>'];
+  for (const n of networks) {
+    const sel = (n === selected) ? ' selected' : '';
+    opts.push(`<option value="${escapeHtml(n)}"${sel}>${escapeHtml(n)}</option>`);
+  }
+  // If the style references a network not in the list (e.g. just deleted),
+  // include it as a stray so we don't silently drop it from the YAML.
+  if (selected && !networks.includes(selected)) {
+    opts.push(`<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)} (orphan)</option>`);
+  }
+  return opts.join('');
+}
+
+function renderGlobal() {
+  // Shadow-color sliders + swatch
+  for (let i = 0; i < 3; i++) {
+    const ch = ['r','g','b'][i];
+    const inp = document.getElementById(`rngShadow_${ch}`);
+    inp.value = SHADOW_COLOR[i];
+    document.getElementById(`numShadow_${ch}`).textContent = String(SHADOW_COLOR[i]);
+  }
+  document.getElementById('swShadow').style.background = rgbCSS(SHADOW_COLOR);
+
+  // Mask-by-water toggle
+  const t = document.getElementById('maskByWaterToggle');
+  t.classList.toggle('is-on', !!MASK_BY_WATER);
+}
+
+function updateCounts() {
+  const el = document.getElementById('statusCounts');
+  if (!el) return;
+  el.textContent = `${NETWORKS.length} networks · ${STYLES.length} styles`;
+}
+
+function rgbCSS(rgb) { return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; }
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// -----------------------------------------------------------------------------
+// Online indicator + render-state messaging
+// -----------------------------------------------------------------------------
+
+function setOnlineIndicator(state, msg) {
+  const el = document.getElementById('onlineIndicator');
+  const lbl = document.getElementById('onlineLabel');
+  el.classList.toggle('is-online', state === 'online');
+  el.classList.toggle('is-error',  state === 'error');
+  lbl.textContent = msg || (state === 'online' ? 'online' : (state === 'error' ? 'error' : 'offline'));
+}
+
+function setRenderState(state, msg) {
+  const el = document.getElementById('renderState');
+  if (!el) return;
+  if (state === 'saving')    el.textContent = 'Saving…';
+  else if (state === 'rendering') el.textContent = 'Rendering…';
+  else if (state === 'ok')   el.textContent = msg || 'Rendered';
+  else if (state === 'err')  el.textContent = msg || 'Error';
+  else                       el.textContent = 'Ready';
+}
+
+// -----------------------------------------------------------------------------
+// Commit flow (PUT config + render + swap preview)
+// -----------------------------------------------------------------------------
+
+async function commitToServer() {
+  if (!ONLINE || !PROJECT_CONFIG) {
+    alert("Backend isn't reachable. Run:\n\n    python3 -m src.server\n\nthen reload this page.");
+    return;
+  }
+  const updated = { ...PROJECT_CONFIG, roads: readRoadsFromControls() };
+  setRenderState('saving');
+  try {
+    const putR = await fetch(`/api/config/${CONFIG_NAME}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    });
+    if (!putR.ok) throw new Error(`PUT ${putR.status}`);
+
+    setRenderState('rendering');
+    const renderR = await fetch(`/api/render/${CONFIG_NAME}`, { method: 'POST' });
+    if (!renderR.ok) throw new Error(`render ${renderR.status}`);
+    const result = await renderR.json();
+
+    const previewUrl = (await fetchPreviewUrl(CONFIG_NAME)) || result.url;
+    await new Promise((resolve, reject) => {
+      const img = document.getElementById('map');
+      const onLoad = () => { img.removeEventListener('error', onErr); resolve(); };
+      const onErr  = () => { img.removeEventListener('load',  onLoad); reject(new Error('image load failed')); };
+      img.addEventListener('load',  onLoad, { once: true });
+      img.addEventListener('error', onErr,  { once: true });
+      img.src = previewUrl;
+    });
+
+    const plateEl = document.getElementById('plate');
+    plateEl.classList.remove('commit-flash');
+    void plateEl.offsetWidth;
+    plateEl.classList.add('commit-flash');
+
+    PROJECT_CONFIG = updated;
+    setRenderState('ok', `rendered in ${(result.total_ms / 1000).toFixed(1)} s`);
+
+    if (window.Cartograph && Cartograph.History) {
+      Cartograph.History.pushSnapshot('commit');
+    }
+  } catch (e) {
+    console.error('[routes] commit failed', e);
+    setRenderState('err', e.message);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Project switcher
+// -----------------------------------------------------------------------------
+
+function renderConfigList() {
+  const dd = document.getElementById('projectDropdown');
+  dd.innerHTML = '';
+  for (const name of CONFIG_LIST) {
+    const b = document.createElement('button');
+    b.className = 'dropdown__item' + (name === CONFIG_NAME ? ' is-active' : '');
+    b.textContent = name;
+    b.addEventListener('click', () => {
+      const url = new URL(location.href);
+      url.searchParams.set('project', name);
+      location.href = url.toString();
+    });
+    dd.appendChild(b);
+  }
+}
+
+function openDropdown()  { document.getElementById('projectDropdown').hidden = false;  document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'true');  }
+function closeDropdown() { document.getElementById('projectDropdown').hidden = true;   document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'false'); }
+function toggleDropdown() {
+  document.getElementById('projectDropdown').hidden ? openDropdown() : closeDropdown();
+}
+
+// -----------------------------------------------------------------------------
+// Boot
+// -----------------------------------------------------------------------------
+
+async function tryConnectServer() {
+  try {
+    const [listR, cfgR] = await Promise.all([
+      fetch('/api/configs'),
+      fetch(`/api/config/${CONFIG_NAME}`),
+    ]);
+    if (!listR.ok || !cfgR.ok) throw new Error('api unavailable');
+    CONFIG_LIST = await listR.json();
+    const cfg = await cfgR.json();
+    hydrateFromConfig(cfg);
+
+    const previewUrl = await fetchPreviewUrl(CONFIG_NAME);
+    if (previewUrl) document.getElementById('map').src = previewUrl;
+
+    ONLINE = true;
+    setOnlineIndicator('online');
+    renderConfigList();
+
+    // Initialize shared Save + History modules. Routes uses an explicit
+    // commit (manual mode) — undo/redo restores the roads block by
+    // re-hydrating from the snapshot.
+    if (window.Cartograph) {
+      const buildCfg = () => ({
+        ...(PROJECT_CONFIG || {}),
+        roads: readRoadsFromControls(),
+      });
+      const applyCfg = (cfg) => {
+        PROJECT_CONFIG = cfg;
+        hydrateFromConfig(cfg);
+      };
+      Cartograph.Save.init({
+        project: CONFIG_NAME, getCfg: buildCfg, mode: "manual",
+      });
+      Cartograph.History.init({ getCfg: buildCfg, applyCfg });
+    }
+  } catch (e) {
+    console.log(`[routes] offline: ${e.message}`);
+    ONLINE = false;
+    setOnlineIndicator('error', 'offline');
+  }
+}
+
+document.getElementById('projectSwitcher').addEventListener('click', toggleDropdown);
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#projectSwitcher') && !ev.target.closest('#projectDropdown')) {
+    closeDropdown();
+  }
+});
+
+// Mode-nav routing — preserves ?project= across mode switches.
+for (const link of document.querySelectorAll('#modesNav a[data-route]')) {
+  const route = link.dataset.route;
+  if (!route || route === '#') {
+    link.addEventListener('click', (ev) => ev.preventDefault());
+    continue;
+  }
+  const url = new URL(route, location.origin);
+  url.searchParams.set('project', CONFIG_NAME);
+  link.href = url.pathname + url.search;
+}
+
+// Networks add
+document.getElementById('btnAddNetwork').addEventListener('click', () => {
+  const inp = document.getElementById('networkInput');
+  const v = (inp.value || '').trim();
+  if (!v) return;
+  if (NETWORKS.includes(v)) { inp.value = ''; return; }
+  NETWORKS.push(v);
+  inp.value = '';
+  renderNetworks();
+  // Re-render style cards so the new network shows up in their <select>s.
+  renderStyles();
+  updateCounts();
+});
+document.getElementById('networkInput').addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    document.getElementById('btnAddNetwork').click();
+  }
+});
+
+// Style add
+document.getElementById('btnAddStyle').addEventListener('click', () => {
+  const seed = NETWORKS[0] || '';
+  STYLES.push({
+    id:           `s${nextStyleId++}`,
+    name:         `style_${STYLES.length + 1}`,
+    network:      seed,
+    color:        [180, 160, 110],
+    width:        2,
+    shadow_width: 1,
+    refs:         [],
+  });
+  renderStyles();
+  updateCounts();
+});
+
+// Global controls
+for (const ch of ['r','g','b']) {
+  document.getElementById(`rngShadow_${ch}`).addEventListener('input', (ev) => {
+    const i = ['r','g','b'].indexOf(ch);
+    SHADOW_COLOR[i] = Number(ev.target.value);
+    document.getElementById(`numShadow_${ch}`).textContent = String(SHADOW_COLOR[i]);
+    document.getElementById('swShadow').style.background = rgbCSS(SHADOW_COLOR);
+  });
+}
+document.getElementById('maskByWaterToggle').addEventListener('click', () => {
+  MASK_BY_WATER = !MASK_BY_WATER;
+  document.getElementById('maskByWaterToggle').classList.toggle('is-on', MASK_BY_WATER);
+});
+
+// Footer
+document.getElementById('btnRoutesCommit').addEventListener('click', commitToServer);
+document.getElementById('btnRoutesRevert').addEventListener('click', () => {
+  if (PROJECT_CONFIG) hydrateFromConfig(PROJECT_CONFIG);
+});
+
+// -----------------------------------------------------------------------------
+// CSS-transform zoom + pan (read-only canvas — no overlay alignment needed,
+// so a simple transform is fine; paint/place use buffer-scaling for pixel-
+// perfect overlay markers).
+// -----------------------------------------------------------------------------
+(function setupZoomPan() {
+  const section = document.getElementById('canvasSection');
+  const wrap    = document.getElementById('plateWrap');
+  if (!section || !wrap) return;
+
+  let zoom = 1, panX = 0, panY = 0;
+  const ZMIN = 0.5, ZMAX = 8;
+
+  const apply = () => {
+    wrap.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    document.getElementById('zoomReadout').textContent = `${Math.round(zoom * 100)}%`;
+  };
+  const reset = () => { zoom = 1; panX = 0; panY = 0; apply(); };
+  // Zoom around a viewport-anchored point so the spot under the cursor stays
+  // put. Math: new_pan = anchor + (old_pan - anchor) * (newZoom / oldZoom)
+  const zoomAt = (cx, cy, factor) => {
+    const r = section.getBoundingClientRect();
+    // Convert cursor → wrap-local coordinates pre-transform
+    const cxInSection = cx - r.left - r.width / 2;
+    const cyInSection = cy - r.top  - r.height / 2;
+    const newZoom = Math.max(ZMIN, Math.min(ZMAX, zoom * factor));
+    const k = newZoom / zoom;
+    panX = cxInSection - (cxInSection - panX) * k;
+    panY = cyInSection - (cyInSection - panY) * k;
+    zoom = newZoom;
+    apply();
+  };
+
+  section.addEventListener('wheel', (ev) => {
+    ev.preventDefault();
+    const factor = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomAt(ev.clientX, ev.clientY, factor);
+  }, { passive: false });
+
+  let dragging = null;
+  section.addEventListener('pointerdown', (ev) => {
+    // Don't start a pan if the click landed on a HUD button
+    if (ev.target.closest('.zoom-hud')) return;
+    dragging = { x: ev.clientX, y: ev.clientY, panX, panY };
+    section.classList.add('is-panning');
+    section.setPointerCapture(ev.pointerId);
+  });
+  section.addEventListener('pointermove', (ev) => {
+    if (!dragging) return;
+    panX = dragging.panX + (ev.clientX - dragging.x);
+    panY = dragging.panY + (ev.clientY - dragging.y);
+    apply();
+  });
+  const endDrag = (ev) => {
+    if (!dragging) return;
+    dragging = null;
+    section.classList.remove('is-panning');
+    if (section.releasePointerCapture) section.releasePointerCapture(ev.pointerId);
+  };
+  section.addEventListener('pointerup', endDrag);
+  section.addEventListener('pointercancel', endDrag);
+
+  document.getElementById('btnZoomIn').addEventListener('click', () => {
+    const r = section.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25);
+  });
+  document.getElementById('btnZoomOut').addEventListener('click', () => {
+    const r = section.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25);
+  });
+  document.getElementById('btnZoomReset').addEventListener('click', reset);
+})();
+
+tryConnectServer();
+</script>
+</body>
+</html>

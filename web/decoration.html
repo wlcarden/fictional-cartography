@@ -1,0 +1,1854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Cartograph — Decoration</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --ink:        #13100b;
+  --ink-1:      #181410;
+  --ink-2:      #1f1a14;
+  --ink-3:      #261f18;
+  --rule:       #2d2620;
+  --rule-2:     #3a3127;
+
+  --bone:       #ded2ba;
+  --bone-2:     #c2b699;
+  --bone-dim:   #8b8270;
+  --bone-faint: #5b5448;
+
+  --brass:        #b88a3c;
+  --brass-bright: #e0b160;
+  --brass-deep:   #7a5a23;
+
+  --blood:      #8a3a30;
+  --leaf:       #6b8033;
+
+  --serif: "Fraunces", "Times New Roman", serif;
+  --mono:  "IBM Plex Mono", ui-monospace, "Menlo", monospace;
+
+  --rail-r: 380px;
+  --top:    52px;
+  --bot:    26px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  opacity: 0.06; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+.topbar {
+  height: var(--top);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ink-1);
+  position: relative; z-index: 10;
+}
+.brand {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  border-right: 1px solid var(--rule);
+}
+.brand__mark {
+  width: 26px; height: 26px;
+  border: 1px solid var(--brass);
+  display: grid; place-items: center;
+  font-family: var(--serif); font-size: 13px;
+  color: var(--brass-bright);
+  font-style: italic;
+}
+.brand__name {
+  font-family: var(--mono); font-weight: 500;
+  letter-spacing: 0.32em; font-size: 11px; color: var(--bone);
+}
+.brand__name em {
+  color: var(--bone-faint); font-style: normal; margin-left: 6px;
+}
+
+.modes {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 0; justify-self: start;
+}
+.modes__sep {
+  width: 1px; height: 14px; background: var(--rule-2); margin: 0 14px;
+  align-self: center;
+}
+.mode {
+  background: none; border: none; color: var(--bone-dim);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
+  padding: 6px 14px; text-transform: uppercase;
+  position: relative; cursor: pointer;
+  text-decoration: none;
+}
+.mode:hover { color: var(--bone-2); }
+.mode[aria-disabled="true"] {
+  color: var(--bone-faint); opacity: 0.45; cursor: not-allowed;
+  font-style: italic;
+}
+.mode[aria-disabled="true"]:hover { color: var(--bone-faint); }
+.mode.is-active { color: var(--brass-bright); }
+.mode.is-active::after {
+  content: "";
+  position: absolute; bottom: -1px; left: 14px; right: 14px;
+  height: 2px; background: var(--brass);
+}
+.mode__num {
+  display: inline-block; opacity: 0.55; margin-right: 8px; font-size: 9.5px;
+  color: var(--bone-faint);
+}
+.mode.is-active .mode__num { color: var(--brass-deep); opacity: 1; }
+
+.project {
+  display: flex; align-items: center; padding: 0 18px;
+  gap: 14px; border-left: 1px solid var(--rule);
+  position: relative;
+}
+.project-switcher {
+  background: none; border: 1px solid var(--rule-2); color: var(--bone);
+  padding: 6px 12px; cursor: pointer; min-width: 220px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  text-transform: uppercase; text-align: left;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.project-switcher:hover { border-color: var(--brass-deep); color: var(--brass-bright); }
+.project-switcher__caret { color: var(--bone-faint); font-size: 9px; }
+.dropdown {
+  position: absolute; top: calc(100% - 1px); right: 18px;
+  min-width: 240px; max-width: 320px;
+  background: var(--ink-1); border: 1px solid var(--rule-2);
+  display: flex; flex-direction: column;
+  z-index: 20;
+}
+.dropdown[hidden] { display: none; }
+.dropdown__item {
+  background: none; border: none; color: var(--bone-dim);
+  text-align: left; padding: 9px 14px; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; border-bottom: 1px solid var(--rule);
+}
+.dropdown__item:hover { background: var(--ink-2); color: var(--bone); }
+.dropdown__item.is-active { color: var(--brass-bright); }
+.dropdown__item:last-child { border-bottom: none; }
+.online {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.online .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--bone-faint); display: inline-block;
+}
+.online.is-online .dot { background: var(--leaf); }
+.online.is-error  .dot { background: var(--blood); }
+
+main.canvas {
+  display: grid;
+  grid-template-columns: 1fr var(--rail-r);
+  height: calc(100vh - var(--top) - var(--bot));
+}
+
+.canvas-section {
+  position: relative;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(ellipse at center, rgba(255,200,140,0.04) 0%, transparent 60%),
+    var(--ink);
+  overflow: hidden;
+  padding: 36px;
+}
+.plate-wrap { position: relative; max-width: 100%; max-height: 100%; }
+.plate {
+  position: relative;
+  max-width: 100%; max-height: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--ink-2);
+  box-shadow:
+    0 0 0 1px var(--rule),
+    0 22px 44px -16px rgba(0,0,0,0.7);
+}
+.plate img {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.plate__caption {
+  position: absolute;
+  bottom: -22px; left: 0;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-faint);
+}
+.plate-mark {
+  position: absolute; width: 16px; height: 16px;
+  border: 1px solid var(--brass-deep);
+  pointer-events: none;
+}
+.plate-mark--tl { top: -1px; left: -1px;  border-right: 0; border-bottom: 0; }
+.plate-mark--tr { top: -1px; right: -1px; border-left: 0;  border-bottom: 0; }
+.plate-mark--bl { bottom: -1px; left: -1px;  border-right: 0; border-top: 0; }
+.plate-mark--br { bottom: -1px; right: -1px; border-left: 0;  border-top: 0; }
+
+/* Zoom HUD — bottom-right of canvas section */
+.zoom-hud {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--ink-1);
+  border: 1px solid var(--rule-2);
+  padding: 4px 6px;
+  z-index: 5;
+  font-family: var(--mono);
+}
+.zoom-hud button {
+  background: none; border: 1px solid var(--rule-2);
+  color: var(--bone-2); cursor: pointer;
+  width: 26px; height: 26px;
+  font-size: 13px; line-height: 1;
+}
+.zoom-hud button:hover { color: var(--brass-bright); border-color: var(--brass-deep); }
+.zoom-readout {
+  min-width: 48px; text-align: center;
+  font-size: 10px; letter-spacing: 0.16em;
+  color: var(--bone-dim);
+}
+.canvas-section { cursor: grab; }
+.canvas-section.is-panning { cursor: grabbing; }
+.plate-wrap { transform-origin: center center; will-change: transform; }
+
+.inspector {
+  border-left: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+.inspector__head {
+  padding: 18px 22px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.inspector__eyebrow {
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin-bottom: 8px;
+}
+.inspector__title {
+  font-family: var(--serif);
+  font-size: 30px; line-height: 1; letter-spacing: -0.005em;
+  font-weight: 400;
+  font-variation-settings: "opsz" 96, "SOFT" 25, "WONK" 1;
+  color: var(--bone); margin: 0 0 6px;
+}
+.inspector__sub {
+  font-family: var(--serif); font-style: italic;
+  font-size: 13px; color: var(--bone-dim);
+  font-variation-settings: "SOFT" 50;
+}
+.inspector__body { overflow-y: auto; flex: 1; }
+
+fieldset.section {
+  border: 0; padding: 18px 22px 14px; margin: 0;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
+fieldset.section legend {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: var(--bone-dim);
+  margin-bottom: 14px; padding: 0;
+  width: 100%; display: flex; align-items: center;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 6px 0;
+}
+.row__label {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.row__num {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--bone); text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+}
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 2px; background: var(--rule-2);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--brass); cursor: pointer;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--brass-deep);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--brass); cursor: pointer;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px var(--brass-deep);
+}
+input[type="text"], input[type="number"], select {
+  background: var(--ink-2);
+  border: 1px solid var(--rule-2);
+  color: var(--bone);
+  padding: 6px 10px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+}
+input[type="text"]:focus, input[type="number"]:focus, select:focus {
+  outline: none; border-color: var(--brass-deep);
+}
+select {
+  -webkit-appearance: none; appearance: none;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><polygon points='0,0 10,0 5,6' fill='%238b8270'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.swatch-block {
+  width: 26px; height: 26px;
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.triplet {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.triplet__cell {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.triplet__cell label {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.34em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.triplet__cell .row__num { text-align: left; font-size: 11px; min-width: 0; }
+
+/* Re-usable card pattern for border-line + legend-entry rows */
+.card {
+  background: var(--ink-2);
+  border: 1px solid var(--rule);
+  padding: 12px;
+  margin-bottom: 10px;
+  display: grid; gap: 8px;
+}
+.card__head {
+  display: grid; grid-template-columns: 26px 1fr auto;
+  align-items: center; gap: 10px;
+}
+.card__delete {
+  background: none; border: 1px solid var(--rule-2);
+  color: var(--bone-faint);
+  width: 26px; height: 26px;
+  cursor: pointer; line-height: 1; font-size: 14px;
+}
+.card__delete:hover { border-color: var(--blood); color: var(--blood); }
+.card__title {
+  background: transparent; border: none;
+  border-bottom: 1px solid var(--rule-2);
+  color: var(--bone);
+  font-family: var(--serif); font-size: 15px;
+  font-variation-settings: "opsz" 24, "SOFT" 30;
+  padding: 4px 0;
+  width: 100%;
+}
+.card__title:focus { outline: none; border-bottom-color: var(--brass); }
+
+.inline-grid {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.inline-grid--num {
+  grid-template-columns: 70px 80px;
+}
+
+.inspector__foot {
+  padding: 14px 22px;
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.btn {
+  background: var(--brass);
+  color: var(--ink);
+  border: 1px solid var(--brass-deep);
+  padding: 9px 16px; cursor: pointer;
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  font-weight: 500;
+}
+.btn:hover { background: var(--brass-bright); }
+.btn--ghost {
+  background: transparent;
+  color: var(--bone-2);
+  border: 1px solid var(--rule-2);
+}
+.btn--ghost:hover { color: var(--bone); border-color: var(--bone-faint); }
+.btn--add {
+  width: 100%;
+  background: transparent;
+  color: var(--bone-2);
+  border: 1px dashed var(--rule-2);
+  margin-top: 8px;
+  padding: 10px 12px;
+}
+.btn--add:hover { color: var(--brass-bright); border-color: var(--brass-deep); }
+
+.statusbar {
+  height: var(--bot);
+  border-top: 1px solid var(--rule);
+  background: var(--ink-1);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0 18px;
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--bone-faint);
+  gap: 24px;
+}
+.statusbar b { color: var(--bone-2); font-weight: 500; }
+.statusbar .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brass); display: inline-block; margin-right: 8px;
+}
+
+/* on/off toggle pill — used for boundary + cities enable flags */
+.toggle__track::after {
+  content: ""; position: absolute;
+  width: 12px; height: 12px;
+  background: var(--bone-dim); border-radius: 50%;
+  top: 3px; left: 3px;
+  transition: left 0.15s, background 0.15s;
+}
+.toggle.is-on .toggle__track { background: var(--brass-deep) !important; }
+.toggle.is-on .toggle__track::after { left: 17px; background: var(--brass-bright); }
+
+/* informational "pipeline-fixed" callout */
+.fixed-list {
+  display: grid; gap: 8px;
+}
+.fixed-list__row {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 10px; align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--rule);
+}
+.fixed-list__row:last-child { border-bottom: 0; }
+.fixed-list__name {
+  font-family: var(--serif); font-style: italic; font-size: 13px;
+  color: var(--bone-2); font-variation-settings:'SOFT' 40;
+}
+.fixed-list__status {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--bone-faint);
+}
+
+@keyframes commit-flash {
+  0%   { box-shadow: 0 0 0 1px var(--rule),     0 22px 44px -16px rgba(0,0,0,0.7); }
+  50%  { box-shadow: 0 0 0 2px var(--brass-bright), 0 22px 44px -16px rgba(0,0,0,0.7); }
+  100% { box-shadow: 0 0 0 1px var(--rule),     0 22px 44px -16px rgba(0,0,0,0.7); }
+}
+.plate.commit-flash { animation: commit-flash 0.6s ease-out; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark">C</span>
+    <span class="brand__name">CARTOGRAPH <em>DRAFT</em></span>
+  </div>
+
+  <nav class="modes" id="modesNav">
+    <a class="mode" data-route="/setup"><span class="mode__num">01</span>Setup</a>
+    <a class="mode" data-route="/paint"><span class="mode__num">02</span>Terrain</a>
+    <a class="mode" data-route="/place"><span class="mode__num">03</span>Places</a>
+    <a class="mode" data-route="/routes"><span class="mode__num">04</span>Routes</a>
+    <a class="mode" data-route="/narrative"><span class="mode__num">05</span>Narrative</a>
+    <a class="mode is-active" data-route="/decoration"><span class="mode__num">06</span>Decoration</a>
+    <span class="modes__sep"></span>
+    <a class="mode" data-route="/render"><span class="mode__num">07</span>Render</a>
+  </nav>
+
+  <div class="project">
+    <button class="project-switcher" id="projectSwitcher" aria-haspopup="true" aria-expanded="false">
+      <span id="projectName">jersea-wastes</span>
+      <span class="project-switcher__caret">▼</span>
+    </button>
+    <div class="dropdown" id="projectDropdown" hidden></div>
+    <span class="online" id="onlineIndicator"><span class="dot"></span><span id="onlineLabel">offline</span></span>
+  </div>
+</header>
+
+<main class="canvas">
+  <section class="canvas-section" id="canvasSection">
+    <div class="plate-wrap" id="plateWrap">
+      <div class="plate" id="plate">
+        <span class="plate-mark plate-mark--tl"></span>
+        <span class="plate-mark plate-mark--tr"></span>
+        <span class="plate-mark plate-mark--bl"></span>
+        <span class="plate-mark plate-mark--br"></span>
+        <img id="map" alt="full render preview" />
+      </div>
+      <div class="plate__caption">final render · scroll to zoom · drag to pan</div>
+    </div>
+    <div class="zoom-hud">
+      <button id="btnZoomOut" title="Zoom out">−</button>
+      <span class="zoom-readout" id="zoomReadout">100%</span>
+      <button id="btnZoomIn" title="Zoom in">+</button>
+      <button id="btnZoomReset" title="Reset (1×)">⊕</button>
+    </div>
+  </section>
+
+  <aside class="inspector">
+    <header class="inspector__head">
+      <div class="inspector__eyebrow">Decoration · Cartographic furniture</div>
+      <h2 class="inspector__title">Frame &amp; legend</h2>
+      <p class="inspector__sub">Paper, border lines, and legend entries.</p>
+    </header>
+
+    <div class="inspector__body">
+
+      <fieldset class="section">
+        <legend>Paper
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">map backdrop</span>
+        </legend>
+        <div style="display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: center; padding: 4px 0 12px;">
+          <span class="swatch-block" id="swPaper"></span>
+          <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim);">Paper color</span>
+        </div>
+        <div class="triplet">
+          <div class="triplet__cell">
+            <label>R</label>
+            <span class="row__num" id="numPaper_r">—</span>
+            <input type="range" id="rngPaper_r" min="0" max="255" step="1" value="210">
+          </div>
+          <div class="triplet__cell">
+            <label>G</label>
+            <span class="row__num" id="numPaper_g">—</span>
+            <input type="range" id="rngPaper_g" min="0" max="255" step="1" value="190">
+          </div>
+          <div class="triplet__cell">
+            <label>B</label>
+            <span class="row__num" id="numPaper_b">—</span>
+            <input type="range" id="rngPaper_b" min="0" max="255" step="1" value="150">
+          </div>
+        </div>
+        <div class="row" style="margin-top: 14px;">
+          <span class="row__label">Border</span>
+          <input type="range" id="rngBorder" min="0" max="200" step="1" value="100">
+          <span class="row__num" id="numBorder">100</span>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Frame lines
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">nested rectangles</span>
+        </legend>
+        <div id="borderLineCards"></div>
+        <button class="btn btn--add" id="btnAddBorderLine">+ Add frame line</button>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Legend entries
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">drawn in lower-left</span>
+        </legend>
+        <div id="legendCards"></div>
+        <button class="btn btn--add" id="btnAddLegend">+ Add legend row</button>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>State boundaries
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">cached GeoJSON</span>
+        </legend>
+        <div style="padding: 4px 0 12px;">
+          <label class="toggle" id="boundariesToggle" style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+            <span class="toggle__track" style="position: relative; width: 32px; height: 18px; background: var(--rule-2); border-radius: 999px;"></span>
+            <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-2);">Draw boundaries</span>
+          </label>
+        </div>
+        <div id="boundariesBody" hidden>
+          <div class="inline-grid">
+            <span class="row__label">Highlight</span>
+            <input type="text" id="fHighlight" placeholder='e.g. "New Jersey"' />
+          </div>
+          <div style="display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: center; padding: 12px 0 4px;">
+            <span class="swatch-block" id="swHighlight"></span>
+            <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim);">Highlight color</span>
+          </div>
+          <div class="triplet">
+            <div class="triplet__cell">
+              <label>R</label>
+              <span class="row__num" id="numHi_r">—</span>
+              <input type="range" id="rngHi_r" min="0" max="255" step="1" value="255">
+            </div>
+            <div class="triplet__cell">
+              <label>G</label>
+              <span class="row__num" id="numHi_g">—</span>
+              <input type="range" id="rngHi_g" min="0" max="255" step="1" value="210">
+            </div>
+            <div class="triplet__cell">
+              <label>B</label>
+              <span class="row__num" id="numHi_b">—</span>
+              <input type="range" id="rngHi_b" min="0" max="255" step="1" value="70">
+            </div>
+          </div>
+          <div class="row" style="margin-top: 8px;">
+            <span class="row__label">Alpha</span>
+            <input type="range" id="rngHi_a" min="0" max="255" step="1" value="200">
+            <span class="row__num" id="numHi_a">200</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: center; padding: 14px 0 4px;">
+            <span class="swatch-block" id="swOther"></span>
+            <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim);">Other states</span>
+          </div>
+          <div class="triplet">
+            <div class="triplet__cell">
+              <label>R</label>
+              <span class="row__num" id="numOth_r">—</span>
+              <input type="range" id="rngOth_r" min="0" max="255" step="1" value="170">
+            </div>
+            <div class="triplet__cell">
+              <label>G</label>
+              <span class="row__num" id="numOth_g">—</span>
+              <input type="range" id="rngOth_g" min="0" max="255" step="1" value="170">
+            </div>
+            <div class="triplet__cell">
+              <label>B</label>
+              <span class="row__num" id="numOth_b">—</span>
+              <input type="range" id="rngOth_b" min="0" max="255" step="1" value="190">
+            </div>
+          </div>
+          <div class="row" style="margin-top: 8px;">
+            <span class="row__label">Alpha</span>
+            <input type="range" id="rngOth_a" min="0" max="255" step="1" value="70">
+            <span class="row__num" id="numOth_a">70</span>
+          </div>
+
+          <p style="margin: 14px 0 0; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+            States are loaded from <code>cache/boundaries/state_boundaries.json</code>. Edit the <code>states:</code> list in the YAML to add/remove which polygons load.
+          </p>
+          <p id="statesAvailable" style="margin: 6px 0 0; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--bone-faint);">— states configured</p>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Reference cities
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">orientation aids</span>
+        </legend>
+        <div style="padding: 4px 0;">
+          <label class="toggle" id="citiesToggle" style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+            <span class="toggle__track" style="position: relative; width: 32px; height: 18px; background: var(--rule-2); border-radius: 999px;"></span>
+            <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-2);">Show cities</span>
+          </label>
+        </div>
+        <p id="citiesAvailable" style="margin: 10px 0 0; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--bone-faint);">— cities configured</p>
+        <p style="margin: 6px 0 0; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          The <code>cities:</code> list in the YAML controls which dots draw. Marker style is fixed: small ringed dot + italic name above-right.
+        </p>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Compass rose
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">decoration.compass</span>
+        </legend>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkCompassEnabled" style="margin: 0;">
+          <label for="chkCompassEnabled" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Enabled</label>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <span class="row__label">Position</span>
+          <select id="selCompassPosition" style="background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+            <option value="bottom-right">bottom-right</option>
+            <option value="bottom-left">bottom-left</option>
+            <option value="top-right">top-right</option>
+            <option value="top-left">top-left</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top: 10px;">
+          <span class="row__label">Radius %</span>
+          <input type="range" id="rngCompassRadius" min="0" max="10" step="0.5" value="0">
+          <span class="row__num" id="numCompassRadius">auto</span>
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Radius as % of min(canvas_w, canvas_h). 0 = auto (1/22 of canvas).
+        </div>
+        <div class="row" style="margin-top: 10px;">
+          <span class="row__label">Offset X</span>
+          <input type="number" id="numCompassOffsetX" min="0" max="400" step="1" value="20"
+                 style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+          <span class="row__label" style="margin-left: 16px;">Offset Y</span>
+          <input type="number" id="numCompassOffsetY" min="0" max="400" step="1" value="80"
+                 style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Scale bar
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">decoration.scale_bar</span>
+        </legend>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkScaleEnabled" style="margin: 0;">
+          <label for="chkScaleEnabled" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Enabled</label>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <span class="row__label">Position</span>
+          <select id="selScalePosition" style="background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+            <option value="bottom-center">bottom-center</option>
+            <option value="bottom-left">bottom-left</option>
+            <option value="bottom-right">bottom-right</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top: 10px;">
+          <span class="row__label">Bar miles</span>
+          <input type="number" id="numScaleMiles" min="1" max="500" step="1" value="20"
+                 style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+          <span class="row__label" style="margin-left: 16px;">Segments</span>
+          <input type="number" id="numScaleSegments" min="1" max="10" step="1" value="4"
+                 style="width: 60px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+        </div>
+        <div class="row" style="margin-top: 10px;">
+          <span class="row__label">Offset from border</span>
+          <input type="number" id="numScaleOffset" min="0" max="200" step="1" value="60"
+                 style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Credit line
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">decoration.credit</span>
+        </legend>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkCreditEnabled" style="margin: 0;">
+          <label for="chkCreditEnabled" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Enabled</label>
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Text comes from the project's <code>credit</code> field (set in Setup). Disabling here hides it without removing the text.
+        </div>
+        <div class="row" style="margin-top: 10px; gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkCreditDivider" style="margin: 0;">
+          <label for="chkCreditDivider" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Divider line above</label>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <span class="row__label">Offset from border</span>
+          <input type="number" id="numCreditOffset" min="0" max="200" step="1" value="28"
+                 style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Pixels above the inner edge of the canvas border. Default 28 keeps the credit cleanly inside the frame.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Corner ornaments
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">decoration.ornaments</span>
+        </legend>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkOrnamentsEnabled" style="margin: 0;">
+          <label for="chkOrnamentsEnabled" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Enabled</label>
+        </div>
+
+        <div style="margin-top: 14px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-faint);">Glyph</div>
+        <div class="segmented" id="ornamentGlyphPicker"
+             style="grid-template-columns: repeat(8, 1fr); margin-top: 6px; font-family: 'DejaVu Sans', system-ui, sans-serif; font-size: 18px;">
+          <button type="button" data-glyph="⚜" title="fleur-de-lis (default)">⚜</button>
+          <button type="button" data-glyph="✦" title="four-pointed star">✦</button>
+          <button type="button" data-glyph="✧" title="four-pointed star outline">✧</button>
+          <button type="button" data-glyph="❋" title="heavy snowflake">❋</button>
+          <button type="button" data-glyph="◆" title="black diamond">◆</button>
+          <button type="button" data-glyph="✤" title="four-petal flower">✤</button>
+          <button type="button" data-glyph="✣" title="four-petal flower outline">✣</button>
+          <button type="button" data-glyph="✱" title="heavy asterisk">✱</button>
+        </div>
+        <div class="row" style="margin-top: 8px;">
+          <span class="row__label">Custom</span>
+          <input type="text" id="fOrnamentGlyph" maxlength="4"
+                 style="width: 80px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit; font-family: 'DejaVu Sans', system-ui, sans-serif; font-size: 16px; text-align: center;"
+                 placeholder="any char">
+          <span style="color: var(--bone-faint); font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; margin-left: 12px;">overrides picker</span>
+        </div>
+
+        <div class="row" style="margin-top: 14px;">
+          <span class="row__label">Size</span>
+          <input type="range" id="rngOrnamentSize" min="16" max="96" step="1" value="32">
+          <span class="row__num" id="numOrnamentSize">32</span>
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Base font size in pixels. Auto-scales with canvas.
+        </div>
+
+        <div style="margin-top: 14px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-faint);">Color</div>
+        <div class="triplet" style="margin-top: 6px;">
+          <div class="triplet__cell">
+            <label>R</label>
+            <span class="row__num" id="numOrnamentColor_r">85</span>
+            <input type="range" min="0" max="255" step="1" value="85" id="rngOrnamentColor_r">
+          </div>
+          <div class="triplet__cell">
+            <label>G</label>
+            <span class="row__num" id="numOrnamentColor_g">65</span>
+            <input type="range" min="0" max="255" step="1" value="65" id="rngOrnamentColor_g">
+          </div>
+          <div class="triplet__cell">
+            <label>B</label>
+            <span class="row__num" id="numOrnamentColor_b">45</span>
+            <input type="range" min="0" max="255" step="1" value="45" id="rngOrnamentColor_b">
+          </div>
+        </div>
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-block; width: 36px; height: 18px; border: 1px solid var(--rule-2);" id="swOrnamentColor"></span>
+          <span style="color: var(--bone-faint); font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;">shadow auto-darkens 55%</span>
+        </div>
+
+        <div class="row" style="margin-top: 14px;">
+          <span class="row__label">Inset X</span>
+          <input type="number" id="numOrnamentInsetX" min="0" max="400" step="1" value="35"
+                 style="width: 70px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+          <span class="row__label" style="margin-left: 12px;">Top</span>
+          <input type="number" id="numOrnamentInsetTop" min="0" max="400" step="1" value="30"
+                 style="width: 70px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+          <span class="row__label" style="margin-left: 12px;">Bottom</span>
+          <input type="number" id="numOrnamentInsetBottom" min="0" max="400" step="1" value="45"
+                 style="width: 70px; background: var(--ink-2); color: var(--bone); border: 1px solid var(--rule-2); padding: 6px 8px; font: inherit;">
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Pixel insets from each canvas corner. Top + bottom can differ to compensate for the title cartouche.
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend>Title cartouche
+          <span style="margin-left:auto; letter-spacing:0.18em; color: var(--bone-faint);">decoration.cartouche</span>
+        </legend>
+        <div class="row" style="gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkCartoucheEnabled" style="margin: 0;">
+          <label for="chkCartoucheEnabled" style="cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">Enabled</label>
+        </div>
+        <div style="margin-top: 4px; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">
+          Cartouche text comes from the project name + subtitle (set in Setup).
+        </div>
+      </fieldset>
+
+    </div>
+
+    <footer class="inspector__foot">
+      <button class="btn btn--ghost" id="btnDecoRevert">Revert</button>
+      <button class="btn" id="btnDecoCommit">Commit to YAML</button>
+    </footer>
+  </aside>
+</main>
+
+<footer class="statusbar">
+  <div>
+    <span class="dot"></span>
+    <span id="renderState">Ready</span>
+  </div>
+  <div></div>
+  <div>
+    <span>config / <b id="statusConfig">jersea-wastes.yaml</b></span>
+    <span>·</span>
+    <span><b id="statusCounts">— frame lines · — legend rows</b></span>
+  </div>
+</footer>
+
+<div class="grain"></div>
+
+<script src="/_shared.js"></script>
+<script>
+// -----------------------------------------------------------------------------
+// Decoration mode prototype.
+// Edits cartographic furniture YAML:
+//   canvas.paper_color     [r,g,b]   — paper backdrop
+//   canvas.border          int       — outer margin px
+//   canvas.border_lines    list of   { offset, color:[r,g,b], width }
+//   legend.entries         list of   { type, color, label }
+// Compass / scale bar / ornaments / cartouche are pipeline-fixed for now.
+// -----------------------------------------------------------------------------
+
+let CONFIG_NAME = (new URLSearchParams(location.search).get('project')) || 'jersea-wastes';
+let PROJECT_CONFIG = null;
+let CONFIG_LIST = [];
+let ONLINE = false;
+
+let PAPER_COLOR  = [210, 190, 150];
+let BORDER_PX    = 100;
+let BORDER_LINES = [];   // [{ id, offset, color:[r,g,b 0-255], width }]
+let LEGEND_ROWS  = [];   // [{ id, type, color (string or [r,g,b]), label }]
+let nextLineId = 1;
+let nextLegendId = 1;
+
+// Boundaries + reference-city state. The lists themselves (which states /
+// which city dots) stay YAML-level for now; this UI only surfaces the
+// enable flags + boundary colors.
+let BOUNDARIES_ENABLED = false;
+let HIGHLIGHT_NAME     = '';
+let HIGHLIGHT_RGBA     = [255, 210, 70, 200];
+let OTHER_RGBA         = [170, 170, 190, 70];
+let CITIES_ENABLED     = false;
+
+// ─── decoration.* (compass / scale_bar / credit / ornaments / cartouche) ───
+// All five blocks default to the prior hard-coded behavior so existing
+// configs without a `decoration:` block render identically.
+let COMPASS = {
+  enabled:    true,
+  position:   'bottom-right',
+  radius_pct: 0,        // 0 = auto (1/22 of min(cw, ch))
+  offset_x:   20,
+  offset_y:   80,
+};
+let SCALE_BAR = {
+  enabled:            true,
+  position:           'bottom-center',
+  bar_miles:          20,
+  segments:           4,
+  offset_from_border: 60,
+};
+let CREDIT_DECO = {
+  enabled:            true,
+  divider:            true,
+  offset_from_border: 28,
+};
+// Ornaments — full parameter surface. The default values match the
+// pipeline's prior hard-coded behavior so configs without an
+// `decoration.ornaments` block render identically.
+let ORNAMENTS = {
+  enabled:      true,
+  glyph:        '⚜',
+  size:         32,
+  color:        [85, 65, 45],
+  inset_x:      35,
+  inset_top:    30,
+  inset_bottom: 45,
+};
+let CARTOUCHE_ENABLED = true;
+
+// Decoration mode shows the FULL render — frame/legend tweaks are judged
+// against the finished map (settlements, regions, water labels visible).
+// The label-free canvas stage is reserved for modes with live overlay edits.
+const PREVIEW_STAGE = 'final';
+const LEGEND_TYPES = ['circle', 'line', 'italic_text'];
+
+async function fetchPreviewUrl(slug, stage = PREVIEW_STAGE) {
+  for (const s of [stage, 'final']) {
+    try {
+      const r = await fetch(`/api/stage-preview/${slug}/${s}`);
+      if (r.ok) return (await r.json()).url;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function rgbCSS(rgb) { return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; }
+function sanitizeRGB(v, fallback) {
+  if (!Array.isArray(v) || v.length < 3) return fallback.slice();
+  return [0,1,2].map(i => {
+    const n = Number(v[i]);
+    return Number.isFinite(n) ? Math.max(0, Math.min(255, Math.round(n))) : fallback[i];
+  });
+}
+function sanitizeRGBA(v, fallback) {
+  // Accepts [r,g,b] or [r,g,b,a]; falls back to provided default (4-tuple).
+  if (!Array.isArray(v) || v.length < 3) return fallback.slice();
+  const out = [0,1,2,3].map(i => {
+    const raw = i < v.length ? v[i] : (i === 3 ? 255 : fallback[i]);
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(0, Math.min(255, Math.round(n))) : fallback[i];
+  });
+  return out;
+}
+function rgbaCSS(rgba) { return `rgba(${rgba[0]},${rgba[1]},${rgba[2]},${(rgba[3]/255).toFixed(2)})`; }
+
+// -----------------------------------------------------------------------------
+// YAML ⇄ UI
+// -----------------------------------------------------------------------------
+
+function hydrateFromConfig(cfg) {
+  PROJECT_CONFIG = cfg;
+  const cv = cfg.canvas || {};
+  PAPER_COLOR = sanitizeRGB(cv.paper_color, [210, 190, 150]);
+  BORDER_PX   = Number(cv.border ?? 100);
+
+  BORDER_LINES = [];
+  nextLineId = 1;
+  for (const line of (cv.border_lines || [])) {
+    BORDER_LINES.push({
+      id:     `bl${nextLineId++}`,
+      offset: Number(line.offset ?? 0),
+      color:  sanitizeRGB(line.color, [50, 40, 30]),
+      width:  Number(line.width ?? 1),
+    });
+  }
+
+  LEGEND_ROWS = [];
+  nextLegendId = 1;
+  const entries = (cfg.legend && cfg.legend.entries) || [];
+  for (const e of entries) {
+    LEGEND_ROWS.push({
+      id:    `lg${nextLegendId++}`,
+      type:  String(e.type || 'circle'),
+      color: e.color != null ? e.color : 'gold',   // can be name string or [r,g,b]
+      label: String(e.label || ''),
+    });
+  }
+
+  // State boundaries
+  const sb = cfg.state_boundaries || {};
+  BOUNDARIES_ENABLED = !!sb.enabled;
+  HIGHLIGHT_NAME     = String(sb.highlight || '');
+  HIGHLIGHT_RGBA     = sanitizeRGBA(sb.highlight_color, [255, 210, 70, 200]);
+  OTHER_RGBA         = sanitizeRGBA(sb.other_color,     [170, 170, 190, 70]);
+
+  // Reference cities — only the enable flag is editable here. The cities[]
+  // list stays YAML-level (count surfaces in renderBoundariesUI).
+  CITIES_ENABLED = !!(cfg.reference_cities && cfg.reference_cities.enabled);
+
+  // Decoration block — compass / scale_bar / credit / ornaments / cartouche
+  // toggles. Each defaults to the prior hard-coded behavior so configs
+  // without a `decoration:` block render identically.
+  const deco = cfg.decoration || {};
+  const c = deco.compass || {};
+  COMPASS = {
+    enabled:    c.enabled !== false,
+    position:   String(c.position || 'bottom-right'),
+    radius_pct: Number(c.radius_pct || 0),
+    offset_x:   Number(c.offset_x ?? 20),
+    offset_y:   Number(c.offset_y ?? 80),
+  };
+  const sbar = deco.scale_bar || {};
+  SCALE_BAR = {
+    enabled:            sbar.enabled !== false,
+    position:           String(sbar.position || 'bottom-center'),
+    bar_miles:          Number(sbar.bar_miles || 20),
+    segments:           Number(sbar.segments || 4),
+    offset_from_border: Number(sbar.offset_from_border ?? 60),
+  };
+  const cr = deco.credit || {};
+  CREDIT_DECO = {
+    enabled:            cr.enabled !== false,
+    divider:            cr.divider !== false,
+    offset_from_border: Number(cr.offset_from_border ?? 28),
+  };
+  const orn = deco.ornaments || {};
+  ORNAMENTS = {
+    enabled:      orn.enabled !== false,
+    glyph:        String(orn.glyph || '⚜'),
+    size:         Number(orn.size || 32),
+    color:        sanitizeRGB(orn.color, [85, 65, 45]),
+    inset_x:      Number(orn.inset_x ?? 35),
+    inset_top:    Number(orn.inset_top ?? 30),
+    inset_bottom: Number(orn.inset_bottom ?? 45),
+  };
+  CARTOUCHE_ENABLED = (deco.cartouche && deco.cartouche.enabled) !== false;
+
+  document.getElementById('projectName').textContent  = CONFIG_NAME;
+  document.getElementById('statusConfig').textContent = `${CONFIG_NAME}.yaml`;
+
+  renderPaper();
+  renderBorderLines();
+  renderLegend();
+  renderBoundaries();
+  renderCities();
+  renderDecoration();
+  updateCounts();
+}
+
+function readDecorationFromControls() {
+  const prevCanvas = (PROJECT_CONFIG && PROJECT_CONFIG.canvas) || {};
+  const prevLegend = (PROJECT_CONFIG && PROJECT_CONFIG.legend) || {};
+  const prevSB     = (PROJECT_CONFIG && PROJECT_CONFIG.state_boundaries) || {};
+  const prevRC     = (PROJECT_CONFIG && PROJECT_CONFIG.reference_cities) || {};
+  const prevDeco   = (PROJECT_CONFIG && PROJECT_CONFIG.decoration) || {};
+
+  // Build the decoration block. Spread prev so any unknown keys we don't
+  // edit (future-proofing) round-trip cleanly through the UI.
+  const compass = {
+    ...(prevDeco.compass || {}),
+    enabled:    !!COMPASS.enabled,
+    position:   String(COMPASS.position),
+    offset_x:   Number(COMPASS.offset_x),
+    offset_y:   Number(COMPASS.offset_y),
+  };
+  // radius_pct is omitted when 0 (auto) so we don't pollute YAML with a
+  // no-op key. The pipeline already defaults to auto when the key is missing.
+  if (Number(COMPASS.radius_pct) > 0) {
+    compass.radius_pct = Number(COMPASS.radius_pct);
+  } else {
+    delete compass.radius_pct;
+  }
+
+  const scaleBar = {
+    ...(prevDeco.scale_bar || {}),
+    enabled:            !!SCALE_BAR.enabled,
+    position:           String(SCALE_BAR.position),
+    bar_miles:          Number(SCALE_BAR.bar_miles),
+    segments:           Number(SCALE_BAR.segments),
+    offset_from_border: Number(SCALE_BAR.offset_from_border),
+  };
+
+  const credit = {
+    ...(prevDeco.credit || {}),
+    enabled:            !!CREDIT_DECO.enabled,
+    divider:            !!CREDIT_DECO.divider,
+    offset_from_border: Number(CREDIT_DECO.offset_from_border),
+  };
+
+  return {
+    canvas: {
+      ...prevCanvas,
+      paper_color:  PAPER_COLOR.slice(),
+      border:       Number(BORDER_PX),
+      border_lines: BORDER_LINES.map(l => ({
+        offset: Number(l.offset),
+        color:  l.color.slice(),
+        width:  Number(l.width),
+      })),
+    },
+    legend: {
+      ...prevLegend,
+      entries: LEGEND_ROWS.map(r => ({
+        type:  r.type,
+        color: r.color,         // preserved exactly as user entered (name or RGB)
+        label: r.label,
+      })),
+    },
+    // Spread prev first so the YAML's `states:` list (which the UI doesn't
+    // edit) round-trips lossless. Same for `cities:` under reference_cities.
+    state_boundaries: {
+      ...prevSB,
+      enabled:         BOUNDARIES_ENABLED,
+      highlight:       HIGHLIGHT_NAME,
+      highlight_color: HIGHLIGHT_RGBA.slice(),
+      other_color:     OTHER_RGBA.slice(),
+    },
+    reference_cities: {
+      ...prevRC,
+      enabled: CITIES_ENABLED,
+    },
+    decoration: {
+      ...prevDeco,
+      compass,
+      scale_bar: scaleBar,
+      credit,
+      ornaments: {
+        ...(prevDeco.ornaments || {}),
+        enabled:      !!ORNAMENTS.enabled,
+        glyph:        String(ORNAMENTS.glyph || '⚜'),
+        size:         Number(ORNAMENTS.size) || 32,
+        color:        ORNAMENTS.color.slice(),
+        inset_x:      Number(ORNAMENTS.inset_x) || 0,
+        inset_top:    Number(ORNAMENTS.inset_top) || 0,
+        inset_bottom: Number(ORNAMENTS.inset_bottom) || 0,
+      },
+      cartouche: { ...(prevDeco.cartouche || {}), enabled: !!CARTOUCHE_ENABLED },
+    },
+  };
+}
+
+// -----------------------------------------------------------------------------
+// Rendering
+// -----------------------------------------------------------------------------
+
+function renderPaper() {
+  for (let i = 0; i < 3; i++) {
+    const ch = ['r','g','b'][i];
+    document.getElementById(`rngPaper_${ch}`).value = PAPER_COLOR[i];
+    document.getElementById(`numPaper_${ch}`).textContent = String(PAPER_COLOR[i]);
+  }
+  document.getElementById('swPaper').style.background = rgbCSS(PAPER_COLOR);
+  document.getElementById('rngBorder').value = BORDER_PX;
+  document.getElementById('numBorder').textContent = String(BORDER_PX);
+}
+
+function renderBorderLines() {
+  const host = document.getElementById('borderLineCards');
+  host.innerHTML = '';
+  if (BORDER_LINES.length === 0) {
+    host.innerHTML = `<div style="padding: 6px 0; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">No frame lines. Add one to draw a nested border.</div>`;
+    return;
+  }
+  for (const l of BORDER_LINES) host.appendChild(buildBorderLineCard(l));
+}
+
+function buildBorderLineCard(l) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = l.id;
+  card.innerHTML = `
+    <div class="card__head">
+      <span class="swatch-block" id="swLine_${l.id}"></span>
+      <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bone-dim);">Frame line</span>
+      <button type="button" class="card__delete" data-action="delete" title="Delete">×</button>
+    </div>
+    <div class="inline-grid inline-grid--num">
+      <span class="row__label">Offset</span>
+      <input type="number" min="0" max="200" step="1" value="${l.offset}" data-field="offset">
+    </div>
+    <div class="inline-grid inline-grid--num">
+      <span class="row__label">Width</span>
+      <input type="number" min="1" max="10" step="1" value="${l.width}" data-field="width">
+    </div>
+    <div class="triplet">
+      <div class="triplet__cell">
+        <label>R</label>
+        <span class="row__num" id="numLine_${l.id}_r">${l.color[0]}</span>
+        <input type="range" min="0" max="255" step="1" value="${l.color[0]}" data-field="color_r">
+      </div>
+      <div class="triplet__cell">
+        <label>G</label>
+        <span class="row__num" id="numLine_${l.id}_g">${l.color[1]}</span>
+        <input type="range" min="0" max="255" step="1" value="${l.color[1]}" data-field="color_g">
+      </div>
+      <div class="triplet__cell">
+        <label>B</label>
+        <span class="row__num" id="numLine_${l.id}_b">${l.color[2]}</span>
+        <input type="range" min="0" max="255" step="1" value="${l.color[2]}" data-field="color_b">
+      </div>
+    </div>
+  `;
+
+  // Use card.querySelector so this works on the freshly-built (still
+  // detached) subtree — getElementById can't see IDs in unattached nodes.
+  const refresh = () => {
+    card.querySelector(`#swLine_${l.id}`).style.background = rgbCSS(l.color);
+    card.querySelector(`#numLine_${l.id}_r`).textContent = String(l.color[0]);
+    card.querySelector(`#numLine_${l.id}_g`).textContent = String(l.color[1]);
+    card.querySelector(`#numLine_${l.id}_b`).textContent = String(l.color[2]);
+  };
+  refresh();
+
+  card.addEventListener('input', (ev) => {
+    const t = ev.target;
+    const f = t.dataset.field;
+    if (!f) return;
+    if (f === 'offset') l.offset = Number(t.value);
+    else if (f === 'width') l.width = Number(t.value);
+    else if (f === 'color_r') l.color[0] = Number(t.value);
+    else if (f === 'color_g') l.color[1] = Number(t.value);
+    else if (f === 'color_b') l.color[2] = Number(t.value);
+    refresh();
+  });
+
+  card.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-action="delete"]');
+    if (!btn) return;
+    const idx = BORDER_LINES.findIndex(x => x.id === l.id);
+    if (idx >= 0) {
+      BORDER_LINES.splice(idx, 1);
+      renderBorderLines();
+      updateCounts();
+    }
+  });
+  return card;
+}
+
+function renderLegend() {
+  const host = document.getElementById('legendCards');
+  host.innerHTML = '';
+  if (LEGEND_ROWS.length === 0) {
+    host.innerHTML = `<div style="padding: 6px 0; font-family: var(--serif); font-style: italic; font-size: 13px; color: var(--bone-dim); font-variation-settings:'SOFT' 50;">No legend rows. The legend will not be rendered.</div>`;
+    return;
+  }
+  for (const r of LEGEND_ROWS) host.appendChild(buildLegendCard(r));
+}
+
+function buildLegendCard(row) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = row.id;
+  // color may be a named-color string (e.g. "gold") referencing cfg.colors,
+  // or an [r,g,b] triplet. Show the original form as a free-text input — the
+  // pipeline's resolve_color() handles either.
+  const colorAsText = Array.isArray(row.color)
+    ? row.color.join(', ')
+    : String(row.color || '');
+
+  card.innerHTML = `
+    <div class="card__head">
+      <span class="swatch-block" id="swLegend_${row.id}" style="background: var(--rule-2);"></span>
+      <input class="card__title" type="text" data-field="label" value="${escapeHtml(row.label)}" placeholder="legend label" />
+      <button type="button" class="card__delete" data-action="delete" title="Delete">×</button>
+    </div>
+    <div class="inline-grid">
+      <span class="row__label">Type</span>
+      <select data-field="type">
+        ${LEGEND_TYPES.map(t => `<option value="${t}"${t === row.type ? ' selected' : ''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div class="inline-grid">
+      <span class="row__label">Color</span>
+      <input type="text" data-field="color" value="${escapeHtml(colorAsText)}" placeholder="name (gold) or 235, 220, 185" />
+    </div>
+  `;
+
+  const colorMap = (PROJECT_CONFIG && PROJECT_CONFIG.colors) || {};
+  const swatchEl = card.querySelector(`#swLegend_${row.id}`);
+  const refreshSwatch = () => {
+    let rgb = null;
+    if (Array.isArray(row.color)) rgb = sanitizeRGB(row.color, null);
+    else if (typeof row.color === 'string') {
+      const named = colorMap[row.color.trim()];
+      if (Array.isArray(named)) rgb = sanitizeRGB(named, null);
+    }
+    swatchEl.style.background = rgb ? rgbCSS(rgb) : 'var(--rule-2)';
+  };
+  refreshSwatch();
+
+  card.addEventListener('input', (ev) => {
+    const t = ev.target;
+    const f = t.dataset.field;
+    if (!f) return;
+    if (f === 'label') row.label = t.value;
+    else if (f === 'type')  row.type = t.value;
+    else if (f === 'color') {
+      // Heuristic: if the input parses as 3 comma-separated numbers, treat
+      // as RGB; else preserve as a string (named color or a literal).
+      const parts = t.value.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length === 3 && parts.every(p => /^\d+$/.test(p))) {
+        row.color = parts.map(Number);
+      } else {
+        row.color = t.value;
+      }
+      refreshSwatch();
+    }
+  });
+
+  card.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-action="delete"]');
+    if (!btn) return;
+    const idx = LEGEND_ROWS.findIndex(x => x.id === row.id);
+    if (idx >= 0) {
+      LEGEND_ROWS.splice(idx, 1);
+      renderLegend();
+      updateCounts();
+    }
+  });
+
+  return card;
+}
+
+function updateCounts() {
+  const el = document.getElementById('statusCounts');
+  if (el) el.textContent = `${BORDER_LINES.length} frame lines · ${LEGEND_ROWS.length} legend rows`;
+}
+
+// ─── decoration.* (compass / scale_bar / credit / ornaments / cartouche) ───
+// Hydrate every editable element in the decoration block from the JS state
+// objects. Called from hydrateFromConfig() after the config arrives, and
+// any time we change a value programmatically (e.g., from undo).
+function renderDecoration() {
+  // Compass
+  document.getElementById('chkCompassEnabled').checked = !!COMPASS.enabled;
+  document.getElementById('selCompassPosition').value  = COMPASS.position;
+  document.getElementById('rngCompassRadius').value    = String(COMPASS.radius_pct);
+  document.getElementById('numCompassRadius').textContent =
+    Number(COMPASS.radius_pct) > 0 ? `${COMPASS.radius_pct}%` : 'auto';
+  document.getElementById('numCompassOffsetX').value = String(COMPASS.offset_x);
+  document.getElementById('numCompassOffsetY').value = String(COMPASS.offset_y);
+
+  // Scale bar
+  document.getElementById('chkScaleEnabled').checked = !!SCALE_BAR.enabled;
+  document.getElementById('selScalePosition').value  = SCALE_BAR.position;
+  document.getElementById('numScaleMiles').value     = String(SCALE_BAR.bar_miles);
+  document.getElementById('numScaleSegments').value  = String(SCALE_BAR.segments);
+  document.getElementById('numScaleOffset').value    = String(SCALE_BAR.offset_from_border);
+
+  // Credit
+  document.getElementById('chkCreditEnabled').checked = !!CREDIT_DECO.enabled;
+  document.getElementById('chkCreditDivider').checked = !!CREDIT_DECO.divider;
+  document.getElementById('numCreditOffset').value    = String(CREDIT_DECO.offset_from_border);
+
+  // Ornaments
+  document.getElementById('chkOrnamentsEnabled').checked = !!ORNAMENTS.enabled;
+  document.getElementById('fOrnamentGlyph').value        = String(ORNAMENTS.glyph || '');
+  document.getElementById('rngOrnamentSize').value       = String(ORNAMENTS.size);
+  document.getElementById('numOrnamentSize').textContent = String(ORNAMENTS.size);
+  for (const [i, ch] of [[0,'r'],[1,'g'],[2,'b']]) {
+    document.getElementById(`rngOrnamentColor_${ch}`).value = ORNAMENTS.color[i];
+    document.getElementById(`numOrnamentColor_${ch}`).textContent = String(ORNAMENTS.color[i]);
+  }
+  document.getElementById('swOrnamentColor').style.background = rgbCSS(ORNAMENTS.color);
+  document.getElementById('numOrnamentInsetX').value      = String(ORNAMENTS.inset_x);
+  document.getElementById('numOrnamentInsetTop').value    = String(ORNAMENTS.inset_top);
+  document.getElementById('numOrnamentInsetBottom').value = String(ORNAMENTS.inset_bottom);
+  // Glyph picker — light up the chip whose data-glyph matches the active glyph
+  for (const b of document.querySelectorAll('#ornamentGlyphPicker button')) {
+    b.classList.toggle('is-active', b.dataset.glyph === ORNAMENTS.glyph);
+  }
+
+  // Cartouche
+  document.getElementById('chkCartoucheEnabled').checked = !!CARTOUCHE_ENABLED;
+}
+
+function renderBoundaries() {
+  document.getElementById('boundariesToggle').classList.toggle('is-on', BOUNDARIES_ENABLED);
+  document.getElementById('boundariesBody').hidden = !BOUNDARIES_ENABLED;
+
+  document.getElementById('fHighlight').value = HIGHLIGHT_NAME;
+
+  // Highlight color (R/G/B/A) + swatch
+  for (const [i, ch] of [[0,'r'], [1,'g'], [2,'b'], [3,'a']]) {
+    document.getElementById(`rngHi_${ch}`).value = HIGHLIGHT_RGBA[i];
+    document.getElementById(`numHi_${ch}`).textContent = String(HIGHLIGHT_RGBA[i]);
+  }
+  document.getElementById('swHighlight').style.background = rgbaCSS(HIGHLIGHT_RGBA);
+
+  // Other-states color (R/G/B/A) + swatch
+  for (const [i, ch] of [[0,'r'], [1,'g'], [2,'b'], [3,'a']]) {
+    document.getElementById(`rngOth_${ch}`).value = OTHER_RGBA[i];
+    document.getElementById(`numOth_${ch}`).textContent = String(OTHER_RGBA[i]);
+  }
+  document.getElementById('swOther').style.background = rgbaCSS(OTHER_RGBA);
+
+  // Available-states info line
+  const states = ((PROJECT_CONFIG && PROJECT_CONFIG.state_boundaries) || {}).states || [];
+  const txt = states.length === 0
+    ? 'no states configured (add a `states:` list in YAML)'
+    : `${states.length} states: ${states.join(', ')}`;
+  document.getElementById('statesAvailable').textContent = txt;
+}
+
+function renderCities() {
+  document.getElementById('citiesToggle').classList.toggle('is-on', CITIES_ENABLED);
+  const cities = ((PROJECT_CONFIG && PROJECT_CONFIG.reference_cities) || {}).cities || [];
+  const txt = cities.length === 0
+    ? 'no cities configured (add a `cities:` list in YAML)'
+    : `${cities.length} ${cities.length === 1 ? 'city' : 'cities'} configured`;
+  document.getElementById('citiesAvailable').textContent = txt;
+}
+
+// -----------------------------------------------------------------------------
+// Online + render-state
+// -----------------------------------------------------------------------------
+
+function setOnlineIndicator(state, msg) {
+  const el  = document.getElementById('onlineIndicator');
+  const lbl = document.getElementById('onlineLabel');
+  el.classList.toggle('is-online', state === 'online');
+  el.classList.toggle('is-error',  state === 'error');
+  lbl.textContent = msg || (state === 'online' ? 'online' : (state === 'error' ? 'error' : 'offline'));
+}
+function setRenderState(state, msg) {
+  const el = document.getElementById('renderState');
+  if (!el) return;
+  if (state === 'saving')         el.textContent = 'Saving…';
+  else if (state === 'rendering') el.textContent = 'Rendering…';
+  else if (state === 'ok')        el.textContent = msg || 'Rendered';
+  else if (state === 'err')       el.textContent = msg || 'Error';
+  else                            el.textContent = 'Ready';
+}
+
+// -----------------------------------------------------------------------------
+// Commit
+// -----------------------------------------------------------------------------
+
+async function commitToServer() {
+  if (!ONLINE || !PROJECT_CONFIG) {
+    alert("Backend isn't reachable. Run:\n\n    python3 -m src.server\n\nthen reload this page.");
+    return;
+  }
+  const patch   = readDecorationFromControls();
+  const updated = { ...PROJECT_CONFIG, ...patch };
+  setRenderState('saving');
+  try {
+    const putR = await fetch(`/api/config/${CONFIG_NAME}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    });
+    if (!putR.ok) throw new Error(`PUT ${putR.status}`);
+
+    setRenderState('rendering');
+    const renderR = await fetch(`/api/render/${CONFIG_NAME}`, { method: 'POST' });
+    if (!renderR.ok) throw new Error(`render ${renderR.status}`);
+    const result = await renderR.json();
+
+    const previewUrl = (await fetchPreviewUrl(CONFIG_NAME)) || result.url;
+    await new Promise((resolve, reject) => {
+      const img = document.getElementById('map');
+      const onLoad = () => { img.removeEventListener('error', onErr); resolve(); };
+      const onErr  = () => { img.removeEventListener('load',  onLoad); reject(new Error('image load failed')); };
+      img.addEventListener('load',  onLoad, { once: true });
+      img.addEventListener('error', onErr,  { once: true });
+      img.src = previewUrl;
+    });
+
+    const plateEl = document.getElementById('plate');
+    plateEl.classList.remove('commit-flash');
+    void plateEl.offsetWidth;
+    plateEl.classList.add('commit-flash');
+
+    PROJECT_CONFIG = updated;
+    setRenderState('ok', `rendered in ${(result.total_ms / 1000).toFixed(1)} s`);
+
+    if (window.Cartograph && Cartograph.History) {
+      Cartograph.History.pushSnapshot('commit');
+    }
+  } catch (e) {
+    console.error('[deco] commit failed', e);
+    setRenderState('err', e.message);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Project switcher + boot
+// -----------------------------------------------------------------------------
+
+function renderConfigList() {
+  const dd = document.getElementById('projectDropdown');
+  dd.innerHTML = '';
+  for (const name of CONFIG_LIST) {
+    const b = document.createElement('button');
+    b.className = 'dropdown__item' + (name === CONFIG_NAME ? ' is-active' : '');
+    b.textContent = name;
+    b.addEventListener('click', () => {
+      const url = new URL(location.href);
+      url.searchParams.set('project', name);
+      location.href = url.toString();
+    });
+    dd.appendChild(b);
+  }
+}
+function openDropdown()   { document.getElementById('projectDropdown').hidden = false; document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'true');  }
+function closeDropdown()  { document.getElementById('projectDropdown').hidden = true;  document.getElementById('projectSwitcher').setAttribute('aria-expanded', 'false'); }
+function toggleDropdown() { document.getElementById('projectDropdown').hidden ? openDropdown() : closeDropdown(); }
+
+async function tryConnectServer() {
+  try {
+    const [listR, cfgR] = await Promise.all([
+      fetch('/api/configs'),
+      fetch(`/api/config/${CONFIG_NAME}`),
+    ]);
+    if (!listR.ok || !cfgR.ok) throw new Error('api unavailable');
+    CONFIG_LIST = await listR.json();
+    const cfg = await cfgR.json();
+    hydrateFromConfig(cfg);
+
+    const previewUrl = await fetchPreviewUrl(CONFIG_NAME);
+    if (previewUrl) document.getElementById('map').src = previewUrl;
+
+    ONLINE = true;
+    setOnlineIndicator('online');
+    renderConfigList();
+
+    // Initialize shared Save + History modules. Decoration uses an explicit
+    // commit (manual mode) — undo/redo restores the canvas/legend block by
+    // re-hydrating from the snapshot.
+    if (window.Cartograph) {
+      const buildCfg = () => ({
+        ...(PROJECT_CONFIG || {}),
+        ...readDecorationFromControls(),
+      });
+      const applyCfg = (cfg) => {
+        PROJECT_CONFIG = cfg;
+        hydrateFromConfig(cfg);
+      };
+      Cartograph.Save.init({
+        project: CONFIG_NAME, getCfg: buildCfg, mode: "manual",
+      });
+      Cartograph.History.init({ getCfg: buildCfg, applyCfg });
+    }
+  } catch (e) {
+    console.log(`[deco] offline: ${e.message}`);
+    ONLINE = false;
+    setOnlineIndicator('error', 'offline');
+  }
+}
+
+document.getElementById('projectSwitcher').addEventListener('click', toggleDropdown);
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#projectSwitcher') && !ev.target.closest('#projectDropdown')) {
+    closeDropdown();
+  }
+});
+
+for (const link of document.querySelectorAll('#modesNav a[data-route]')) {
+  const route = link.dataset.route;
+  if (!route || route === '#') {
+    link.addEventListener('click', (ev) => ev.preventDefault());
+    continue;
+  }
+  const url = new URL(route, location.origin);
+  url.searchParams.set('project', CONFIG_NAME);
+  link.href = url.pathname + url.search;
+}
+
+// Paper sliders
+for (const ch of ['r','g','b']) {
+  document.getElementById(`rngPaper_${ch}`).addEventListener('input', (ev) => {
+    const i = ['r','g','b'].indexOf(ch);
+    PAPER_COLOR[i] = Number(ev.target.value);
+    document.getElementById(`numPaper_${ch}`).textContent = String(PAPER_COLOR[i]);
+    document.getElementById('swPaper').style.background = rgbCSS(PAPER_COLOR);
+  });
+}
+document.getElementById('rngBorder').addEventListener('input', (ev) => {
+  BORDER_PX = Number(ev.target.value);
+  document.getElementById('numBorder').textContent = String(BORDER_PX);
+});
+
+// Add buttons
+document.getElementById('btnAddBorderLine').addEventListener('click', () => {
+  // Seed offset by stepping from the deepest existing line, so multi-line
+  // frames stack visually without manual math.
+  const last = BORDER_LINES[BORDER_LINES.length - 1];
+  BORDER_LINES.push({
+    id:     `bl${nextLineId++}`,
+    offset: last ? Math.min(200, Number(last.offset) + 6) : 8,
+    color:  last ? last.color.slice() : [50, 40, 30],
+    width:  1,
+  });
+  renderBorderLines();
+  updateCounts();
+});
+document.getElementById('btnAddLegend').addEventListener('click', () => {
+  LEGEND_ROWS.push({
+    id:    `lg${nextLegendId++}`,
+    type:  'circle',
+    color: 'gold',
+    label: 'New legend row',
+  });
+  renderLegend();
+  updateCounts();
+});
+
+// Boundaries: enable toggle, highlight name, R/G/B/A sliders for both colors
+document.getElementById('boundariesToggle').addEventListener('click', () => {
+  BOUNDARIES_ENABLED = !BOUNDARIES_ENABLED;
+  renderBoundaries();
+});
+document.getElementById('fHighlight').addEventListener('input', (ev) => {
+  HIGHLIGHT_NAME = ev.target.value;
+});
+for (const [i, ch] of [[0,'r'], [1,'g'], [2,'b'], [3,'a']]) {
+  document.getElementById(`rngHi_${ch}`).addEventListener('input', (ev) => {
+    HIGHLIGHT_RGBA[i] = Number(ev.target.value);
+    document.getElementById(`numHi_${ch}`).textContent = String(HIGHLIGHT_RGBA[i]);
+    document.getElementById('swHighlight').style.background = rgbaCSS(HIGHLIGHT_RGBA);
+  });
+  document.getElementById(`rngOth_${ch}`).addEventListener('input', (ev) => {
+    OTHER_RGBA[i] = Number(ev.target.value);
+    document.getElementById(`numOth_${ch}`).textContent = String(OTHER_RGBA[i]);
+    document.getElementById('swOther').style.background = rgbaCSS(OTHER_RGBA);
+  });
+}
+
+// Reference cities: enable toggle only (cities[] list stays YAML-level)
+document.getElementById('citiesToggle').addEventListener('click', () => {
+  CITIES_ENABLED = !CITIES_ENABLED;
+  renderCities();
+});
+
+// ─── Decoration block wiring ─────────────────────────────────────────────
+// Each control mutates the matching JS state field; renderDecoration is not
+// called here because the DOM already reflects the user's input — only the
+// computed bits (compass radius label) need updating.
+document.getElementById('chkCompassEnabled').addEventListener('change', (ev) => {
+  COMPASS.enabled = ev.target.checked;
+});
+document.getElementById('selCompassPosition').addEventListener('change', (ev) => {
+  COMPASS.position = ev.target.value;
+});
+document.getElementById('rngCompassRadius').addEventListener('input', (ev) => {
+  COMPASS.radius_pct = Number(ev.target.value);
+  document.getElementById('numCompassRadius').textContent =
+    COMPASS.radius_pct > 0 ? `${COMPASS.radius_pct}%` : 'auto';
+});
+document.getElementById('numCompassOffsetX').addEventListener('input', (ev) => {
+  COMPASS.offset_x = Number(ev.target.value) || 0;
+});
+document.getElementById('numCompassOffsetY').addEventListener('input', (ev) => {
+  COMPASS.offset_y = Number(ev.target.value) || 0;
+});
+
+document.getElementById('chkScaleEnabled').addEventListener('change', (ev) => {
+  SCALE_BAR.enabled = ev.target.checked;
+});
+document.getElementById('selScalePosition').addEventListener('change', (ev) => {
+  SCALE_BAR.position = ev.target.value;
+});
+document.getElementById('numScaleMiles').addEventListener('input', (ev) => {
+  SCALE_BAR.bar_miles = Math.max(1, Number(ev.target.value) || 0);
+});
+document.getElementById('numScaleSegments').addEventListener('input', (ev) => {
+  SCALE_BAR.segments = Math.max(1, Number(ev.target.value) || 0);
+});
+document.getElementById('numScaleOffset').addEventListener('input', (ev) => {
+  SCALE_BAR.offset_from_border = Math.max(0, Number(ev.target.value) || 0);
+});
+
+document.getElementById('chkCreditEnabled').addEventListener('change', (ev) => {
+  CREDIT_DECO.enabled = ev.target.checked;
+});
+document.getElementById('chkCreditDivider').addEventListener('change', (ev) => {
+  CREDIT_DECO.divider = ev.target.checked;
+});
+document.getElementById('numCreditOffset').addEventListener('input', (ev) => {
+  CREDIT_DECO.offset_from_border = Math.max(0, Number(ev.target.value) || 0);
+});
+
+document.getElementById('chkOrnamentsEnabled').addEventListener('change', (ev) => {
+  ORNAMENTS.enabled = ev.target.checked;
+});
+document.getElementById('ornamentGlyphPicker').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-glyph]');
+  if (!btn) return;
+  ORNAMENTS.glyph = btn.dataset.glyph;
+  document.getElementById('fOrnamentGlyph').value = ORNAMENTS.glyph;
+  for (const b of document.querySelectorAll('#ornamentGlyphPicker button')) {
+    b.classList.toggle('is-active', b === btn);
+  }
+});
+document.getElementById('fOrnamentGlyph').addEventListener('input', (ev) => {
+  // Custom glyph overrides the picker. We allow up to 4 chars (single
+  // emoji can be 4 UTF-16 code units). Empty falls back to the default.
+  const raw = String(ev.target.value || '').trim();
+  ORNAMENTS.glyph = raw || '⚜';
+  // Deselect the picker chips when the user types something that isn't
+  // one of the presets, so it's clear they're in custom territory.
+  for (const b of document.querySelectorAll('#ornamentGlyphPicker button')) {
+    b.classList.toggle('is-active', b.dataset.glyph === ORNAMENTS.glyph);
+  }
+});
+document.getElementById('rngOrnamentSize').addEventListener('input', (ev) => {
+  ORNAMENTS.size = Number(ev.target.value) || 32;
+  document.getElementById('numOrnamentSize').textContent = String(ORNAMENTS.size);
+});
+for (const [i, ch] of [[0,'r'],[1,'g'],[2,'b']]) {
+  document.getElementById(`rngOrnamentColor_${ch}`).addEventListener('input', (ev) => {
+    ORNAMENTS.color[i] = Math.max(0, Math.min(255, Number(ev.target.value) || 0));
+    document.getElementById(`numOrnamentColor_${ch}`).textContent = String(ORNAMENTS.color[i]);
+    document.getElementById('swOrnamentColor').style.background = rgbCSS(ORNAMENTS.color);
+  });
+}
+document.getElementById('numOrnamentInsetX').addEventListener('input', (ev) => {
+  ORNAMENTS.inset_x = Math.max(0, Number(ev.target.value) || 0);
+});
+document.getElementById('numOrnamentInsetTop').addEventListener('input', (ev) => {
+  ORNAMENTS.inset_top = Math.max(0, Number(ev.target.value) || 0);
+});
+document.getElementById('numOrnamentInsetBottom').addEventListener('input', (ev) => {
+  ORNAMENTS.inset_bottom = Math.max(0, Number(ev.target.value) || 0);
+});
+document.getElementById('chkCartoucheEnabled').addEventListener('change', (ev) => {
+  CARTOUCHE_ENABLED = ev.target.checked;
+});
+
+// Footer
+document.getElementById('btnDecoCommit').addEventListener('click', commitToServer);
+document.getElementById('btnDecoRevert').addEventListener('click', () => {
+  if (PROJECT_CONFIG) hydrateFromConfig(PROJECT_CONFIG);
+});
+
+// -----------------------------------------------------------------------------
+// CSS-transform zoom + pan (read-only canvas — see routes.html for the
+// design rationale; identical implementation here).
+// -----------------------------------------------------------------------------
+(function setupZoomPan() {
+  const section = document.getElementById('canvasSection');
+  const wrap    = document.getElementById('plateWrap');
+  if (!section || !wrap) return;
+
+  let zoom = 1, panX = 0, panY = 0;
+  const ZMIN = 0.5, ZMAX = 8;
+
+  const apply = () => {
+    wrap.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    document.getElementById('zoomReadout').textContent = `${Math.round(zoom * 100)}%`;
+  };
+  const reset = () => { zoom = 1; panX = 0; panY = 0; apply(); };
+  const zoomAt = (cx, cy, factor) => {
+    const r = section.getBoundingClientRect();
+    const cxInSection = cx - r.left - r.width / 2;
+    const cyInSection = cy - r.top  - r.height / 2;
+    const newZoom = Math.max(ZMIN, Math.min(ZMAX, zoom * factor));
+    const k = newZoom / zoom;
+    panX = cxInSection - (cxInSection - panX) * k;
+    panY = cyInSection - (cyInSection - panY) * k;
+    zoom = newZoom;
+    apply();
+  };
+
+  section.addEventListener('wheel', (ev) => {
+    ev.preventDefault();
+    const factor = ev.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomAt(ev.clientX, ev.clientY, factor);
+  }, { passive: false });
+
+  let dragging = null;
+  section.addEventListener('pointerdown', (ev) => {
+    if (ev.target.closest('.zoom-hud')) return;
+    dragging = { x: ev.clientX, y: ev.clientY, panX, panY };
+    section.classList.add('is-panning');
+    section.setPointerCapture(ev.pointerId);
+  });
+  section.addEventListener('pointermove', (ev) => {
+    if (!dragging) return;
+    panX = dragging.panX + (ev.clientX - dragging.x);
+    panY = dragging.panY + (ev.clientY - dragging.y);
+    apply();
+  });
+  const endDrag = (ev) => {
+    if (!dragging) return;
+    dragging = null;
+    section.classList.remove('is-panning');
+    if (section.releasePointerCapture) section.releasePointerCapture(ev.pointerId);
+  };
+  section.addEventListener('pointerup', endDrag);
+  section.addEventListener('pointercancel', endDrag);
+
+  document.getElementById('btnZoomIn').addEventListener('click', () => {
+    const r = section.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25);
+  });
+  document.getElementById('btnZoomOut').addEventListener('click', () => {
+    const r = section.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25);
+  });
+  document.getElementById('btnZoomReset').addEventListener('click', reset);
+})();
+
+tryConnectServer();
+</script>
+</body>
+</html>
