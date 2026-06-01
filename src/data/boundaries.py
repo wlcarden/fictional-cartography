@@ -85,3 +85,76 @@ def ensure_state_boundary(name: str) -> list[list[tuple[float, float]]]:
 
     # Re-parse via load to get the canonical [(lat, lon), ...] shape.
     return load_state_boundaries().get(name, [])
+
+
+def ensure_county_boundary(
+    county: str, state: str
+) -> list[list[tuple[float, float]]]:
+    """Return the polygon list for a county, fetching from Overpass if needed.
+
+    Counties live at admin_level=6 in OSM. Because county names repeat across
+    states ("Sussex County" exists in NJ, DE, and VA), the fetch is scoped to
+    the containing `state` via an Overpass area filter.
+
+    The result is cached in the same `state_boundaries.json` library under the
+    bare county name, so the name-based renderer (`draw_state_boundaries`)
+    picks it up with no awareness that it's a county rather than a state.
+    Reference it from a config's `state_boundaries.states` list by name.
+
+    Returns [] if the polygon can't be obtained.
+    """
+    library = load_state_boundaries()
+    if county in library:
+        return library[county]
+
+    print(f"  boundaries: fetching county {county!r} within {state!r}...")
+    from src.data.overpass import fetch_admin_boundary
+    geom = fetch_admin_boundary(county, admin_level=6, within_state=state)
+    if geom is None:
+        print(f"  boundaries: no county boundary returned for {county!r}")
+        return []
+
+    path = cache_dir("boundaries") / CACHE_FILE
+    if path.exists():
+        with open(path) as f:
+            raw = json.load(f)
+    else:
+        raw = {}
+    raw[county] = geom
+    with open(path, "w") as f:
+        json.dump(raw, f, indent=2)
+    print(f"  boundaries: cached {county!r} ({geom.get('type')}, "
+          f"{len(geom.get('coordinates', []))} polygon(s))")
+
+    return load_state_boundaries().get(county, [])
+
+
+def ensure_boundaries(
+    names: list[str], county_of: str | None = None
+) -> int:
+    """Ensure every named boundary is in the cache, fetching any that aren't.
+
+    This is the render-time hook that makes boundary maps reproducible on a
+    fresh clone — mirroring how SRTM tiles and OSM roads auto-fetch on first
+    render. The draw path (`draw_state_boundaries`) only reads the cache, so
+    without this a referenced-but-uncached boundary silently doesn't draw.
+
+    When `county_of` is set, missing names are fetched as counties
+    (admin_level 6) within that state; otherwise as states (admin_level 4).
+    A map referencing a county must therefore set `state_boundaries.county_of`
+    so the fetch can disambiguate (e.g. "Sussex County" exists in NJ/DE/VA).
+
+    Returns the count of boundaries newly fetched this call (0 when all were
+    already cached — the common warm-cache case).
+    """
+    fetched = 0
+    for name in names:
+        if name in load_state_boundaries():
+            continue
+        if county_of:
+            polys = ensure_county_boundary(name, county_of)
+        else:
+            polys = ensure_state_boundary(name)
+        if polys:
+            fetched += 1
+    return fetched

@@ -1,0 +1,190 @@
+name: SUSSEX COUNTY
+subtitle: The Pike — Highland Detail Survey
+credit: Sainthood Survey — Highland Detail, ~120 DC
+
+# Focused subset of the JerSea Wastes map. The full JerSea map covers the
+# whole NJ region (lat 38.85–41.65); this one frames just Sussex County in
+# the northwest highlands. Bounds give the county a ~10% margin; the county
+# is near-square in real distance, so a 1:1 aspect frames it cleanly.
+bounds:
+  lat_n: 41.41
+  lat_s: 40.85
+  lon_w: -75.05
+  lon_e: -74.31
+  aspect_ratio: '1:1'
+
+# Lower downsample than JerSea (4) because the region is small — 2 keeps
+# the ridge-and-valley relief legible at working resolution.
+terrain:
+  sea_level_rise: 10        # canon JerSea flood; no effect here (all highland)
+  downsample: 2
+  palette:
+    low:  [0.80, 0.70, 0.48]
+    mid:  [0.72, 0.65, 0.44]
+    high: [0.56, 0.54, 0.48]
+    mid_break: 0.3
+  water:
+    shallow: [0.58, 0.60, 0.58]
+    deep:    [0.36, 0.40, 0.44]
+    depth_range: 50
+  shade:
+    sun_altitude: 35
+    sun_azimuth: 315
+    floor: 0.3
+  noise:
+    drift_sigma: 60
+    drift_strength: 0.06
+    scorch_sigma: 25
+    scorch_strength: 0.08
+  vignette:
+    strength: 0.4
+    floor: 0.5
+  wasteland_wash:
+    desaturate: 0.12
+    warm_push_r: 0.015
+    cool_push_b: -0.01
+  coastline_darken:
+    dilation: 3
+    factor: 0.7
+
+# Road networks give the empty northern county navigational structure.
+# US:I  → I-80 clipping the southern edge near Stanhope/Netcong
+# US:US → US-206, the N-S spine through Newton (county seat)
+# US:NJ → state routes (23 toward High Point, 94 through Vernon/Newton,
+#         15 by Sparta) — the mesh that laces the north. The anchored
+#         Overpass fetch retrieves only US:NJ proper, not US:NJ:CR county
+#         routes, so the network stays legible.
+roads:
+  mask_by_water: true
+  networks:
+  - US:I
+  - US:US
+  - US:NJ
+  shadow_color: [45, 38, 28]
+  styles:
+    interstate:
+      network: US:I
+      color: [185, 160, 105]
+      width: 3
+      shadow_width: 2
+    us_highway:
+      network: US:US
+      color: [170, 150, 112]
+      width: 2
+      shadow_width: 1
+    state_route:
+      network: US:NJ
+      color: [150, 135, 105]
+      width: 2
+      shadow_width: 1
+
+# Inherited JerSea palette so settlements/regions added later resolve.
+colors:
+  gold:   [230, 190, 80]
+  cyan:   [150, 200, 220]
+  red:    [220, 120, 80]
+  green:  [130, 200, 110]
+  white:  [235, 225, 200]
+  grey:   [175, 170, 160]
+  parch:  [200, 190, 170]
+  water:  [140, 160, 175]
+  shadow: [30, 25, 18]
+
+# The county outline — the whole point of this first pass. "Sussex County"
+# was fetched at admin_level=6 (disambiguated to NJ) and cached in
+# cache/boundaries/state_boundaries.json, so the name-based renderer draws it.
+state_boundaries:
+  enabled: true
+  # county_of tells the renderer to fetch any uncached entry as a county
+  # (admin_level 6) within this state — disambiguating "Sussex County"
+  # (which also exists in DE and VA). Makes the map reproduce on a fresh
+  # clone without a pre-populated boundary cache.
+  county_of: New Jersey
+  states:
+  - Sussex County
+  highlight: Sussex County
+  highlight_color: [225, 185, 95, 235]
+  other_color: [170, 170, 190, 70]
+
+canvas:
+  border: 100
+  paper_color: [210, 190, 150]
+  border_lines:
+  - {offset: 8,  color: [50, 40, 30], width: 3}
+  - {offset: 15, color: [70, 55, 40], width: 1}
+  - {offset: 20, color: [90, 72, 50], width: 2}
+
+decoration:
+  compass:
+    enabled: true
+    position: bottom-right
+  scale_bar:
+    enabled: true
+    position: bottom-center
+    bar_miles: 10
+    segments: 5
+  credit:
+    enabled: true
+  ornaments:
+    enabled: true
+  cartouche:
+    enabled: true
+
+# Legend reflects only what's on the map so far (gold majors, white minors).
+# Legend in the top-left, tucked just below the title cartouche (the
+# renderer auto-clears the cartouche band for top placements). It sits
+# over the wild Kittatinny / High Point terrain — no settlements there —
+# freeing the whole bottom for the southern cluster.
+legend:
+  position: top-left
+  entries:
+  - {color: gold,  label: Major Settlement, type: circle}
+  - {color: white, label: Minor Settlement/Compound, type: circle}
+  - {color: [175, 152, 108], label: Known Road, type: line}
+
+# The in-frame JerSea cluster — pulled verbatim from config/jersea-wastes.yaml
+# so coords/colors/notes stay canon. All six fall in the southern third of
+# the county around the Sparta / Lake Hopatcong / Stanhope area. The northern
+# county (High Point, Newton, Vernon) is still open canvas for later.
+settlements:
+- name: Hayven
+  lat: 41.035
+  lon: -74.641
+  color: gold
+  radius: 12
+  note: Sparta, NJ
+  label_side: above
+- name: Claimer's Quarry
+  lat: 40.902
+  lon: -74.709
+  color: gold
+  radius: 12
+  note: Stanhope, NJ
+  label_side: below-right
+- name: The Eve
+  lat: 40.9632
+  lon: -74.5719
+  color: white
+  radius: 8
+  note: Hopatcong, NJ
+  label_side: right
+- name: Old Ton
+  lat: 40.96
+  lon: -74.7
+  color: white
+  radius: 8
+  label_side: above
+- name: Quiet Hills
+  lat: 40.9464
+  lon: -74.7834
+  color: white
+  radius: 8
+  label_side: left
+- name: Port Barren
+  lat: 40.898
+  lon: -74.741
+  color: white
+  radius: 8
+  label_side: below
+
+regions: []

@@ -697,8 +697,19 @@ def render_map(
         from src.styling.boundaries import (
             draw_state_boundaries, draw_reference_cities,
         )
+        # Auto-fetch any referenced boundary that isn't cached yet, so the
+        # map reproduces on a fresh clone (same "fetch on first render" model
+        # as SRTM/OSM). `county_of` disambiguates county names across states.
+        sb_cfg = cfg.get("state_boundaries", {})
+        if sb_cfg.get("enabled") and sb_cfg.get("states"):
+            from src.data.boundaries import ensure_boundaries
+            n_fetched = ensure_boundaries(
+                sb_cfg.get("states", []), county_of=sb_cfg.get("county_of")
+            )
+            if n_fetched:
+                print(f"    fetched {n_fetched} missing boundary polygon(s)")
         n_boundaries = draw_state_boundaries(
-            final, cfg.get("state_boundaries", {}),
+            final, sb_cfg,
             bounds, h, w, border,
         )
         if n_boundaries:
@@ -1023,8 +1034,36 @@ def render_map(
         legend_cfg = cfg.get("legend", {})
         legend_entries = legend_cfg.get("entries", [])
         if legend_entries:
+            # Position is config-driven. The default ("bottom-left") keeps the
+            # exact historical anchor so existing maps render pixel-identically;
+            # the other corners compute an anchor from the legend's measured
+            # height (mirrors draw_legend's own layout math: 38px title row +
+            # n*28px entries + 14px pad, with a 14px pad bleed on every side).
+            legend_pos = str(legend_cfg.get("position", "bottom-left"))
+            legend_w = 285                      # matches draw_legend default width
+            n_entries = len(legend_entries)
+            legend_h = 38 + n_entries * 28 + 14
+            margin = 15
+            # Top placements must clear the title cartouche. It's centered at
+            # the top spanning y≈2..142 (draw_title_cartouche anchors at y=22
+            # with a 120px box). A wide subtitle reaches into both top corners
+            # at that height, so when the cartouche is on we drop top-anchored
+            # legends just below it. Without a cartouche, hug the inner border.
+            cartouche_on = bool(
+                (deco_cfg.get("cartouche") or {}).get("enabled", True) and title_text
+            )
+            CARTOUCHE_BOTTOM = 142
+            top_y = (CARTOUCHE_BOTTOM + margin) if cartouche_on else (border + margin + 14)
+            if legend_pos == "top-left":
+                lx, ly = border + margin, top_y
+            elif legend_pos == "top-right":
+                lx, ly = cw - border - legend_w - margin, top_y
+            elif legend_pos == "bottom-right":
+                lx, ly = cw - border - legend_w - margin, ch - border - legend_h - margin
+            else:  # bottom-left (default — unchanged historical placement)
+                lx, ly = border + 15, ch - border - 200
             final, draw = draw_legend(
-                final, border + 15, ch - border - 200, legend_entries, color_map,
+                final, lx, ly, legend_entries, color_map,
                 title_font=fonts["legend_title"],
                 entry_font=fonts["legend"],
                 italic_entry_font=fonts["legend_italic"],

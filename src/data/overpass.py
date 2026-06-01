@@ -108,13 +108,21 @@ out body;>;out skel qt;"""
     return query(q, cache_name)
 
 
-def fetch_admin_boundary(name: str, admin_level: int = 4) -> dict | None:
+def fetch_admin_boundary(
+    name: str, admin_level: int = 4, within_state: str | None = None
+) -> dict | None:
     """Fetch a named administrative boundary as a multipolygon GeoJSON-shape.
 
     Query: `relation[boundary=administrative][admin_level=N][name=NAME]`.
-    Default admin_level=4 corresponds to US states. Returns
-    {"type": "Polygon"|"MultiPolygon", "coordinates": [...]} matching the
-    format `cache/boundaries/state_boundaries.json` already uses.
+    Default admin_level=4 corresponds to US states; admin_level=6 is a US
+    county. Returns {"type": "Polygon"|"MultiPolygon", "coordinates": [...]}
+    matching the format `cache/boundaries/state_boundaries.json` already uses.
+
+    `within_state` disambiguates names that repeat across states. Many US
+    county names collide (there's a "Sussex County" in NJ, DE, and VA); a
+    bare name query returns whichever relation OSM lists first. When
+    `within_state` is given we wrap the relation lookup in an Overpass area
+    filter so only the county geographically inside that state matches.
 
     The relation comes back with hundreds of `outer`-role way members.
     We extract each way's inline geometry (via `out geom`) and run a
@@ -127,8 +135,23 @@ def fetch_admin_boundary(name: str, admin_level: int = 4) -> dict | None:
     """
     safe = name.replace('"', '\\"').replace('\\', '\\\\')
     cache_safe = "".join(c if c.isalnum() else "_" for c in name).strip("_").lower()
-    cache_name = f"admin_{admin_level}_{cache_safe}"
-    q = f"""[out:json][timeout:120];
+    if within_state:
+        state_safe = within_state.replace('"', '\\"').replace('\\', '\\\\')
+        state_cache = "".join(
+            c if c.isalnum() else "_" for c in within_state
+        ).strip("_").lower()
+        cache_name = f"admin_{admin_level}_{cache_safe}_in_{state_cache}"
+        # Constrain the relation to those inside the named state's area.
+        # `area[...]->.st` materializes the state polygon as a named area
+        # set; `(area.st)` then filters the county relation to members
+        # geographically within it.
+        q = f"""[out:json][timeout:120];
+area["boundary"="administrative"]["admin_level"="4"]["name"="{state_safe}"]->.st;
+relation["boundary"="administrative"]["admin_level"="{admin_level}"]["name"="{safe}"](area.st);
+out geom;"""
+    else:
+        cache_name = f"admin_{admin_level}_{cache_safe}"
+        q = f"""[out:json][timeout:120];
 relation["boundary"="administrative"]["admin_level"="{admin_level}"]["name"="{safe}"];
 out geom;"""
     data = query(q, cache_name)

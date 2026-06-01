@@ -420,6 +420,7 @@ canvas:
 
 ```yaml
 legend:
+  position: bottom-left # bottom-left | top-left | top-right | bottom-right
   entries:
     - { type: circle, color: bright, label: "Major settlement" }
     - { type: circle, color: red, label: "Hostile settlement" }
@@ -433,18 +434,43 @@ legend:
 | `line`        | Short horizontal line                         |
 | `italic_text` | Italic placeholder text in the legend's color |
 
+`position` (default `bottom-left`) places the legend plaque in one of the four
+corners. Top placements automatically drop below the title cartouche when one is
+present, so a wide subtitle can't overlap a corner legend. The default keeps the
+exact historical anchor, so legacy configs render unchanged.
+
 ## `state_boundaries`
 
-US state-border overlay (uses US Census GeoJSON).
+State- or county-border overlay (uses OSM administrative boundaries).
 
 ```yaml
 state_boundaries:
   enabled: true
   states: ["New Jersey", "Pennsylvania", "Delaware"]
-  highlight: "New Jersey" # one state drawn in highlight_color
+  highlight: "New Jersey" # one entry drawn in highlight_color
   highlight_color: [255, 210, 70, 200] # RGBA
   other_color: [170, 170, 190, 70] # RGBA — draws the rest of `states`
+  county_of: null # see below — set to a state name to draw counties
 ```
+
+Despite the name, this block draws **any** named administrative boundary, not
+just states — the renderer looks each name up in the boundary cache and draws
+its polygon. Set `county_of` to a state name to draw **counties** (admin_level 6) instead of states: missing entries are then fetched as counties within that
+state, which disambiguates repeated county names (e.g. "Sussex County" exists in
+NJ, DE, and VA). Example for a county-focused map:
+
+```yaml
+state_boundaries:
+  enabled: true
+  county_of: New Jersey
+  states: ["Sussex County"]
+  highlight: "Sussex County"
+  highlight_color: [225, 185, 95, 235]
+```
+
+Boundaries auto-fetch on first render (like SRTM/OSM data) and cache to
+`cache/boundaries/state_boundaries.json`, so a map reproduces on a fresh clone
+without manual cache population.
 
 ## `reference_cities`
 
