@@ -93,3 +93,13 @@ python -m src.ui
 - Working resolution (downsample=4): ~2000×2700px, ~12MB PNG, ~2MB JPEG
 - Full resolution (downsample=1): ~8000×10800px, ~150MB PNG
 - Discord-ready: JPEG quality 88, typically 2-3MB
+
+### Backlog logging (standing convention)
+When you hit something the pipeline or web editor doesn't cover — a setting that
+only works by hand-editing YAML, a hardcoded value with no config knob, a manual
+workflow step, or a quirk worth fixing later — **append an entry to
+`docs/backlog.md`** as part of that work, without being asked. Use the existing
+structure (UI gaps / pipeline-config gaps / workflow / suspected bugs) and record
+*Hit while*, *Workaround*, *Proposed*. When you implement a fix, move the entry to
+**Recently resolved** with the commit hash. This keeps the feature backlog current
+across sessions instead of relying on memory.
