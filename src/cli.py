@@ -28,6 +28,10 @@ def main():
         "--embed-metadata", action="store_true",
         help="Embed map name/subtitle/credit + render timestamp into the file metadata.",
     )
+    render_p.add_argument(
+        "--grayscale", action="store_true",
+        help="Convert the output to neutral grayscale at save (for B&W / mono-laser printing).",
+    )
 
     # List command
     list_p = subparsers.add_parser("list", help="List available map configs")
@@ -49,6 +53,7 @@ def main():
             reference_mode=args.reference,
             dpi=args.dpi,
             embed_metadata=args.embed_metadata,
+            grayscale=args.grayscale,
         )
     elif args.command == "list":
         import glob, os

@@ -196,6 +196,23 @@ def load_fonts(
     return fonts
 
 
+def _color_kwargs(cfg_block: dict, mapping: dict[str, str]) -> dict:
+    """Build a kwargs dict of color tuples from a config block.
+
+    `mapping` is {config_key: function_param_name}. For each config key
+    present (and a list/tuple of 3-4 ints), emit `function_param_name -> tuple`.
+    Absent keys are skipped so the drawing function keeps its own default —
+    which is what makes these color knobs backward-compatible (a config that
+    sets none renders identically).
+    """
+    out: dict = {}
+    for cfg_key, param in mapping.items():
+        v = cfg_block.get(cfg_key)
+        if isinstance(v, (list, tuple)) and len(v) in (3, 4):
+            out[param] = tuple(int(c) for c in v)
+    return out
+
+
 def _legend_placement(
     legend_cfg: dict, n_entries: int, cartouche_on: bool,
     cw: int, ch: int, border: int,
@@ -288,6 +305,7 @@ def render_map(
     reference_mode: bool = False,
     dpi: int | None = None,
     embed_metadata: bool = False,
+    grayscale: bool = False,
 ) -> Path:
     """Render a map from a YAML config to disk. Returns the output path.
 
@@ -682,6 +700,10 @@ def render_map(
         buffer_zone=cfg.get("buffer_zone", {}),
         contamination=cfg.get("contamination", {}),
         legend=cfg.get("legend", {}),
+        # The whole decoration block (compass / scale_bar / credit / ornaments
+        # / cartouche — incl. positions AND colours) is rendered in stage 4.
+        # It MUST be in the key or furniture edits return a stale cached final.
+        decoration=cfg.get("decoration", {}),
         title=cfg.get("name", ""),
         subtitle=cfg.get("subtitle", ""),
         credit=cfg.get("credit", ""),
@@ -1030,12 +1052,24 @@ def render_map(
             )
 
         # Title cartouche (top-center is the only style the renderer supports
-        # today; future positions hook in here.)
+        # today; future positions hook in here.) Background/text colours are
+        # optionally config-driven so a B&W/print edition can use a light box
+        # with dark text instead of the default dark plaque. Each knob falls
+        # back to draw_title_cartouche's default when absent, so existing maps
+        # render identically.
         cartouche_cfg = deco_cfg.get("cartouche") or {}
         if cartouche_cfg.get("enabled", True):
+            cart_kwargs = _color_kwargs(cartouche_cfg, {
+                "bg_color": "bg_color",
+                "border_color": "border_color",
+                "title_color": "title_color",
+                "subtitle_color": "sub_color",
+                "divider_color": "divider_color",
+            })
             final, draw = draw_title_cartouche(
                 final, title_text, cfg.get("subtitle"),
                 fonts["title"], fonts["sub"], cw,
+                **cart_kwargs,
             )
 
         # Compass rose
@@ -1066,13 +1100,25 @@ def render_map(
             else:  # bottom-right (default)
                 compass_cx = cw - border - compass_r - offset_x
                 compass_cy = ch - border - compass_r - offset_y
+            compass_color_kwargs = _color_kwargs(compass_cfg, {
+                "line_color": "line_color",
+                "fill_color": "fill_color",
+                "text_color": "text_color",
+            })
             final, draw = draw_compass_rose(
                 final, compass_cx, compass_cy, compass_r, fonts["compass"],
+                **compass_color_kwargs,
             )
 
         # Scale bar
         scale_cfg = deco_cfg.get("scale_bar") or {}
         if scale_cfg.get("enabled", True):
+            scale_color_kwargs = _color_kwargs(scale_cfg, {
+                "dark_color": "dark_color",
+                "light_color": "light_color",
+                "border_color": "border_color",
+                "label_color": "label_color",
+            })
             draw_scale_bar(
                 draw, bounds, w, cw, ch, fonts["scale"],
                 bar_miles=int(scale_cfg.get("bar_miles", 20)),
@@ -1080,6 +1126,7 @@ def render_map(
                 position=scale_cfg.get("position", "bottom-center"),
                 border=border,
                 offset_from_border=int(scale_cfg.get("offset_from_border", 60)),
+                **scale_color_kwargs,
             )
 
         # Legend (kept under cfg.legend for backward compat — not nested
@@ -1097,11 +1144,21 @@ def render_map(
             lx, ly, _ = _legend_placement(
                 legend_cfg, len(legend_entries), cartouche_on, cw, ch, border
             )
+            # Optional background/text colour knobs (same backward-compatible
+            # pattern as the cartouche) so a light-on-dark survey edition can
+            # use a light legend box where dark swatches/text read.
+            legend_color_kwargs = _color_kwargs(legend_cfg, {
+                "bg_color": "bg_color",
+                "border_color": "border_color",
+                "title_color": "title_color",
+                "text_color": "text_color",
+            })
             final, draw = draw_legend(
                 final, lx, ly, legend_entries, color_map,
                 title_font=fonts["legend_title"],
                 entry_font=fonts["legend"],
                 italic_entry_font=fonts["legend_italic"],
+                **legend_color_kwargs,
             )
 
         # Credit line — text comes from cfg.credit (top-level, existing
@@ -1111,11 +1168,13 @@ def render_map(
         credit_cfg = deco_cfg.get("credit") or {}
         credit = (credit_cfg.get("text") or cfg.get("credit") or "").strip()
         if credit and credit_cfg.get("enabled", True):
+            credit_color_kwargs = _color_kwargs(credit_cfg, {"color": "color"})
             draw_credit(
                 draw, credit, fonts["credit"], cw, ch,
                 border=border,
                 offset_from_border=int(credit_cfg.get("offset_from_border", 28)),
                 divider=bool(credit_cfg.get("divider", True)),
+                **credit_color_kwargs,
             )
 
         cache.save_image("final", s4_key, final, h=ch, w=cw, labels=len(placer.boxes))
@@ -1151,6 +1210,14 @@ def render_map(
     # Build the kwargs Pillow expects for each format. DPI applies to
     # raster formats that store physical-size hints (PNG, TIFF, JPEG, PDF).
     final_rgb = final.convert("RGB")
+    if grayscale:
+        # True luminance conversion for print. We collapse to "L" (Rec.601
+        # luma) then expand back to RGB so every downstream format path
+        # (incl. webp/pdf) works unchanged — the file carries neutral greys
+        # with no colour cast, which is what a mono laser wants. Tuning the
+        # tonal range to dodge shadow-plugging is the config's job (a
+        # grayscale-friendly palette), not this conversion's.
+        final_rgb = final_rgb.convert("L").convert("RGB")
     save_kwargs: dict[str, Any] = {}
     if dpi is not None and dpi > 0:
         save_kwargs["dpi"] = (int(dpi), int(dpi))

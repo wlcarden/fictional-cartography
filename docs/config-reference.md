@@ -421,6 +421,10 @@ canvas:
 ```yaml
 legend:
   position: bottom-left # bottom-left | top-left | top-right | bottom-right
+  bg_color: [90, 75, 55, 215] # optional RGBA — plaque background
+  border_color: [170, 150, 115, 220] # optional RGBA
+  title_color: [235, 220, 185] # optional — "MAP KEY" title
+  text_color: [210, 200, 175] # optional — entry labels
   entries:
     - { type: circle, color: bright, label: "Major settlement" }
     - { type: circle, color: red, label: "Hostile settlement" }
@@ -438,6 +442,10 @@ legend:
 corners. Top placements automatically drop below the title cartouche when one is
 present, so a wide subtitle can't overlap a corner legend. The default keeps the
 exact historical anchor, so legacy configs render unchanged.
+
+The colour knobs (`bg_color` / `border_color` / `title_color` / `text_color`) are
+optional and default to the dark plaque. Set them light for a B&W edition so dark
+entry swatches read — otherwise dark swatches on the default dark box vanish.
 
 ## `state_boundaries`
 
@@ -496,6 +504,9 @@ decoration:
     radius_pct: 0 # 0 = auto (1/22 of min(canvas_w, canvas_h))
     offset_x: 20 # px from inner border
     offset_y: 80
+    line_color: [140, 115, 78] # optional — rose rings/arms
+    fill_color: [110, 90, 60] # optional — arrow-arm fill
+    text_color: [140, 115, 78] # optional — N/E/S/W letters
 
   scale_bar:
     enabled: true
@@ -503,11 +514,16 @@ decoration:
     bar_miles: 20 # how many miles the bar represents
     segments: 4 # alternating dark/light segments
     offset_from_border: 60 # px from inner border line
+    dark_color: [80, 65, 45] # optional — dark segments
+    light_color: [180, 165, 135] # optional — light segments
+    border_color: [60, 48, 35] # optional — segment outlines
+    label_color: [120, 105, 78] # optional — "0" / "N miles" text
 
   credit:
     enabled: true
     divider: true # divider line above the credit text
     offset_from_border: 28 # px above the inner border (keeps text inside frame)
+    color: [120, 105, 78] # optional — credit text color
 
   ornaments:
     enabled: true
@@ -520,7 +536,19 @@ decoration:
 
   cartouche:
     enabled: true # title cartouche at top center
+    bg_color: [110, 95, 70, 210] # optional RGBA — plaque background
+    border_color: [170, 150, 115, 200] # optional RGBA
+    title_color: [235, 220, 185] # optional — title text
+    subtitle_color: [200, 190, 165] # optional — subtitle text
+    divider_color: [180, 160, 130] # optional — divider rule
 ```
+
+All the colour knobs above are optional and default to the built-in dark-plaque
+palette, so existing maps render unchanged. They exist so a **black-and-white /
+print edition** can use light furniture with dark text. Pair them with the
+`--grayscale` render flag (true luminance conversion at save) for mono-laser
+output — see `config/sussex-county-bw.yaml` for a worked example. The legend has
+the same colour knobs (`legend.{bg_color, border_color, title_color, text_color}`).
 
 ## `colors`
 

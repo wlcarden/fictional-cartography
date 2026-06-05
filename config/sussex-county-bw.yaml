@@ -1,0 +1,220 @@
+name: SUSSEX COUNTY
+subtitle: The Pike — Highland Detail Survey
+credit: Sainthood Survey — Highland Detail, ~120 DC
+
+# ============================================================================
+# BLACK-AND-WHITE PRINT EDITION of config/sussex-county.yaml.
+# Tuned for a mono laser printer (Brother). Same content + framing; the
+# visual recipe is inverted from the color edition's dark wasteland mood:
+#   - LIGHT terrain so the laser's halftone shadows never plug to solid black
+#   - relief carried by hillshade in the legible mid-band
+#   - DARK line-art features (roads, boundary, markers, labels) — dark-on-white
+#     is what a laser renders crispest
+#   - settlement tiers distinguished by MARKER SHAPE + size, not hue
+#     (gold and cyan have near-identical luminance → indistinguishable in grey)
+# Render with:  cartograph render config/sussex-county-bw.yaml --grayscale
+# ============================================================================
+
+bounds:
+  lat_n: 41.41
+  lat_s: 40.85
+  lon_w: -75.05
+  lon_e: -74.31
+  aspect_ratio: '1:1'
+
+# Light, neutral, high-contrast terrain. The all-highland elevation is spread
+# across the tonal range (mid_break 0.5) and lightened so nothing plugs:
+# darkest ridge ≈ high(0.54) × floor(0.55) ≈ 0.30 luminance, clear of the
+# ~0.25 mono-laser plugging threshold.
+terrain:
+  sea_level_rise: 10
+  downsample: 2
+  palette:
+    low:  [0.90, 0.90, 0.90]   # valleys — light
+    mid:  [0.72, 0.72, 0.72]   # slopes — mid
+    high: [0.54, 0.54, 0.54]   # ridges — mid-dark (NOT black, avoids plugging)
+    mid_break: 0.5
+  water:
+    shallow: [0.78, 0.78, 0.78]
+    deep:    [0.55, 0.55, 0.55]
+    depth_range: 50
+  shade:
+    sun_altitude: 35
+    sun_azimuth: 315
+    floor: 0.55                # lighter shadows so slopes don't plug
+  noise:
+    drift_sigma: 60
+    drift_strength: 0.03       # subtle — heavy noise becomes grey mud
+    scorch_sigma: 25
+    scorch_strength: 0.02
+  vignette:
+    strength: 0.08             # near-off — corner darkening plugs on a laser
+    floor: 0.88
+  wasteland_wash:
+    desaturate: 1.0            # fully neutralize hue before the L-conversion
+    warm_push_r: 0.0
+    cool_push_b: 0.0
+  coastline_darken:
+    dilation: 0                # no water in frame; keep it off
+    factor: 1.0
+
+# Roads as dark line-art on the light terrain. Hierarchy by darkness + width:
+# interstate darkest/thickest, state routes lighter/thinner. No drop shadow —
+# unnecessary on a light background and it just muddies the line.
+roads:
+  mask_by_water: true
+  networks:
+  - US:I
+  - US:US
+  - US:NJ
+  shadow_color: [210, 210, 210]
+  styles:
+    interstate:
+      network: US:I
+      color: [35, 35, 35]
+      width: 3
+      shadow_width: 0
+    us_highway:
+      network: US:US
+      color: [70, 70, 70]
+      width: 2
+      shadow_width: 0
+    state_route:
+      network: US:NJ
+      color: [95, 95, 95]
+      width: 2
+      shadow_width: 0
+
+# Named colors remapped to luminance-distinct greys. Settlements stay dark
+# (they read as ink on the light terrain); the Major/Minor distinction is
+# carried by marker SHAPE (circled_x vs diamond), with a slight luminance
+# difference as a secondary cue.
+colors:
+  gold:   [45, 45, 45]      # Major settlements — near-black
+  white:  [80, 80, 80]      # Minor settlements — dark grey
+  cyan:   [80, 80, 80]
+  red:    [60, 60, 60]
+  green:  [110, 110, 110]
+  grey:   [120, 120, 120]
+  parch:  [225, 225, 225]
+  water:  [170, 170, 170]
+  shadow: [235, 235, 235]   # "shadow" is used as a halo behind dark markers/
+                            # text — make it LIGHT so it haloes against light
+                            # terrain instead of doubling the ink.
+
+# County outline as a crisp dark line on the light terrain.
+state_boundaries:
+  enabled: true
+  county_of: New Jersey
+  states:
+  - Sussex County
+  highlight: Sussex County
+  highlight_color: [40, 40, 40, 255]
+  other_color: [120, 120, 120, 160]
+
+canvas:
+  border: 100
+  paper_color: [236, 234, 230]   # light neutral paper
+  border_lines:
+  - {offset: 8,  color: [45, 45, 45], width: 3}
+  - {offset: 15, color: [80, 80, 80], width: 1}
+  - {offset: 20, color: [110, 110, 110], width: 2}
+
+decoration:
+  compass:
+    enabled: true
+    position: bottom-right
+    line_color: [50, 50, 50]        # dark rose rings/arms on light terrain
+    fill_color: [100, 100, 100, 200]
+    text_color: [45, 45, 45]        # dark N/E/S/W letters
+  scale_bar:
+    enabled: true
+    position: bottom-center
+    bar_miles: 10
+    segments: 5
+    dark_color: [40, 40, 40]        # alternating segments: dark + light, both
+    light_color: [205, 205, 205]    # framed by a dark border so each reads
+    border_color: [30, 30, 30]
+    label_color: [45, 45, 45]
+  credit:
+    enabled: true
+    color: [70, 70, 70]             # dark credit line on light paper
+  ornaments:
+    enabled: true
+    color: [60, 60, 60]      # dark ornaments on light paper
+  cartouche:
+    enabled: true
+    # Light plaque with dark text — matches the survey aesthetic instead of
+    # the default dark band. (New config knobs, default to the dark plaque.)
+    bg_color: [233, 231, 226, 235]
+    border_color: [90, 90, 90, 220]
+    title_color: [38, 38, 38]
+    subtitle_color: [80, 80, 80]
+    divider_color: [110, 110, 110]
+
+# Legend greys mirror the settlement encoding. NOTE: the legend renders a
+# generic circle per "circle" entry — it can't show the circled_x / diamond
+# marker shapes, so Major vs Minor reads here by grey value + label only.
+# (Marker-shape legend swatches are a logged backlog item.)
+legend:
+  position: top-left
+  # Light box so the dark swatches/text read (the default dark box hid them).
+  bg_color: [233, 231, 226, 235]
+  border_color: [90, 90, 90, 220]
+  title_color: [38, 38, 38]
+  text_color: [60, 60, 60]
+  entries:
+  - {color: [45, 45, 45],   label: Major Settlement, type: circle}
+  - {color: [80, 80, 80],   label: Minor Settlement/Compound, type: circle}
+  - {color: [95, 95, 95],   label: Known Road, type: line}
+
+# Settlements re-encoded for B&W: Major = circled_x, Minor = diamond. Shape
+# carries the tier distinction that hue carried in the color edition.
+settlements:
+- name: Hayven
+  lat: 41.035
+  lon: -74.641
+  color: gold
+  radius: 13
+  marker: circled_x
+  note: Sparta, NJ
+  label_side: above
+- name: Claimer's Quarry
+  lat: 40.902
+  lon: -74.709
+  color: gold
+  radius: 13
+  marker: circled_x
+  note: Stanhope, NJ
+  label_side: below-right
+- name: The Eve
+  lat: 40.9632
+  lon: -74.5719
+  color: white
+  radius: 9
+  marker: diamond
+  note: Hopatcong, NJ
+  label_side: right
+- name: Old Ton
+  lat: 40.96
+  lon: -74.7
+  color: white
+  radius: 9
+  marker: diamond
+  label_side: above
+- name: Quiet Hills
+  lat: 40.9464
+  lon: -74.7834
+  color: white
+  radius: 9
+  marker: diamond
+  label_side: left
+- name: Port Barren
+  lat: 40.898
+  lon: -74.741
+  color: white
+  radius: 9
+  marker: diamond
+  label_side: below
+
+regions: []

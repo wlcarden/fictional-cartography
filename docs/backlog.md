@@ -15,6 +15,12 @@ Each entry records: **Hit while** (the context that surfaced it), **Workaround**
 
 ## Open — UI gaps (config works, editor can't set it)
 
+### Furniture + legend colours, and `--grayscale`
+
+- **Hit while:** Building the B&W print edition (`config/sussex-county-bw.yaml`).
+- **Workaround:** Hand-edited YAML. The pipeline now honours background/text colour knobs for the cartouche (`decoration.cartouche.{bg_color,border_color,title_color,subtitle_color,divider_color}`), legend (`legend.{bg_color,border_color,title_color,text_color}`), compass (`decoration.compass.{line_color,fill_color,text_color}`), scale bar (`decoration.scale_bar.{dark_color,light_color,border_color,label_color}`), and credit (`decoration.credit.color`) — but none are in the Decoration editor page. The `--grayscale` export flag is CLI-only (not in the Render page or `/api/render`).
+- **Proposed:** Add colour pickers for each furniture element to the Decoration page; add a Grayscale toggle to the Render page + `grayscale` to the render endpoints. Consider a one-click "B&W print" preset that bundles the light-furniture + grayscale recipe.
+
 ### `legend.position`
 
 - **Hit while:** Sussex County map — needed to move the legend out of the southern cluster.
@@ -53,6 +59,12 @@ Each entry records: **Hit while** (the context that surfaced it), **Workaround**
 
 ## Open — workflow / automation
 
+### OSM data cache is keyed by config name, not by bounds
+
+- **Hit while:** First render of `config/sussex-county-bw.yaml` took ~5 minutes.
+- **Detail:** The roads/landuse Overpass cache uses `routes_{config_stem}` / `landuse_{config_stem}` as the cache key. A variant config with identical bounds (e.g. the B&W edition of an existing map) re-fetches 7+ MB of roads and 2 MB of landuse from Overpass even though the data is byte-identical to the sibling config's already-cached fetch.
+- **Proposed:** Key the OSM data cache by a hash of (bbox + query), not the config name, so sibling/variant configs share fetches. Big win for any "print edition" or A/B variant workflow.
+
 ### Dense-cluster label de-confliction is manual
 
 - **Hit while:** Sussex passes 2–4 — six settlements packed into the southern ~4 miles.
@@ -81,6 +93,8 @@ Each entry records: **Hit while** (the context that surfaced it), **Workaround**
 
 _Kept briefly for continuity; prune when stale._
 
+- **`decoration` block missing from the stage-4 cache key** (this session) — the final-stage cache key listed `legend`, `title`, `credit`, `fonts`… but never the `decoration` block, even though all its furniture (compass / scale_bar / credit / ornaments / cartouche) renders in stage 4. So furniture edits — colour OR position — silently returned a stale cached `final`; they only ever appeared to work when a stage-1–3 change happened to cascade the cache. Fixed by adding `decoration=cfg.get("decoration", {})` to the key. Latent since the decoration block was introduced.
+- **Furniture + legend colours now config-driven** (this session) — added `bg_color`/`text_color`/etc. knobs for the cartouche, legend, compass, scale bar, and credit (wired through `_color_kwargs`; each falls back to the drawing function's default, so existing maps are unchanged). Plus a reusable `--grayscale` export flag (true luminance conversion at save). Enables the B&W print edition `config/sussex-county-bw.yaml`. (UI exposure still pending — see Open/UI gaps.)
 - **Legend placer reservation didn't follow `legend.position`** (this session) — the placer reserved the legend's _default_ bottom-left corner regardless of where the legend was configured. After moving Sussex's legend to top-left, the phantom bottom-left reservation squeezed the southern settlement cluster while the real (top-left) legend went unprotected. Fixed via `_legend_placement`, a single helper shared by the reservation and the draw so they always agree; the default branch keeps the exact legacy box for pixel-identical legacy renders. This was the actual cause of the "tangled cluster," not label-placer weakness.
 - **Boundary auto-fetch on render** (commit `4c3c155`) — boundaries were the one data layer that only read the cache instead of fetching on demand; a fresh clone silently lost any non-pre-cached outline. Now fetches on first render like SRTM/OSM, with `state_boundaries.county_of` for county disambiguation.
 - **County boundary fetching** (commit `4c3c155`) — `fetch_admin_boundary(within_state=...)` + `ensure_county_boundary()` added; counties (admin_level 6) are now fetchable with state disambiguation.
