@@ -56,12 +56,18 @@ Each entry records: **Hit while** (the context that surfaced it), **Workaround**
 ### Dense-cluster label de-confliction is manual
 
 - **Hit while:** Sussex passes 2–4 — six settlements packed into the southern ~4 miles.
-- **Workaround:** Hand-tuned `label_side` per settlement and relocated the legend to free space. The collision placer handles overlaps but doesn't _spread_ a tight cluster; dense groups still need manual side hints.
-- **Proposed:** A clustering/auto-spread pass that, when N markers fall within a small radius, fans their preferred sides radially from the cluster centroid before the placer scores positions.
+- **Workaround:** Hand-tuned `label_side` per settlement and relocated the legend. **Update:** most of the tangle turned out to be the hardcoded-legend-reservation bug (see Recently resolved) — once the placer knew the legend had moved, it spread the cluster cleanly on its own, with leader lines, no manual offsets. So the placer is better than it looked; the remaining need is narrower.
+- **Proposed:** A clustering/auto-spread pass for genuinely dense groups (N markers within a small radius) that fans preferred sides radially from the centroid before scoring. Lower priority now that the reservation bug is fixed.
 
 ---
 
 ## Suspected bugs (verify before acting)
+
+### Scale-bar + compass placer reservations are hardcoded to default positions
+
+- **Hit while:** Fixing the legend-reservation bug (same root cause).
+- **Detail:** The placer reserves furniture boxes so labels don't sit on them. The legend reservation now follows `legend.position` (fixed), but the **scale-bar** reservation (`cw//2 ± 200`, bottom-center) and **compass** reservation (bottom-right corner) are still hardcoded to their default positions. If a config sets `decoration.scale_bar.position` or `decoration.compass.position` away from the default, the reservation won't follow — labels could overlap the moved furniture, and a phantom box stays at the old spot. No live map triggers it yet (Sussex keeps both at defaults).
+- **Proposed:** Compute the scale-bar and compass reservation boxes from their configured positions, mirroring the `_legend_placement` fix. Probably extract a small `_furniture_box(kind, position, ...)` helper.
 
 ### Cartouche vertical geometry doesn't scale with canvas
 
@@ -75,6 +81,7 @@ Each entry records: **Hit while** (the context that surfaced it), **Workaround**
 
 _Kept briefly for continuity; prune when stale._
 
+- **Legend placer reservation didn't follow `legend.position`** (this session) — the placer reserved the legend's _default_ bottom-left corner regardless of where the legend was configured. After moving Sussex's legend to top-left, the phantom bottom-left reservation squeezed the southern settlement cluster while the real (top-left) legend went unprotected. Fixed via `_legend_placement`, a single helper shared by the reservation and the draw so they always agree; the default branch keeps the exact legacy box for pixel-identical legacy renders. This was the actual cause of the "tangled cluster," not label-placer weakness.
 - **Boundary auto-fetch on render** (commit `4c3c155`) — boundaries were the one data layer that only read the cache instead of fetching on demand; a fresh clone silently lost any non-pre-cached outline. Now fetches on first render like SRTM/OSM, with `state_boundaries.county_of` for county disambiguation.
 - **County boundary fetching** (commit `4c3c155`) — `fetch_admin_boundary(within_state=...)` + `ensure_county_boundary()` added; counties (admin_level 6) are now fetchable with state disambiguation.
 - **Credit line drew on top of the border** (earlier session) — credit now offsets from the inner border (`decoration.credit.offset_from_border`) instead of the canvas edge.

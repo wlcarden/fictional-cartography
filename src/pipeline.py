@@ -196,6 +196,46 @@ def load_fonts(
     return fonts
 
 
+def _legend_placement(
+    legend_cfg: dict, n_entries: int, cartouche_on: bool,
+    cw: int, ch: int, border: int,
+) -> tuple[int, int, tuple[int, int, int, int]]:
+    """Compute the legend plaque's top-left anchor and its reservation box.
+
+    Shared by the placer reservation (so settlement labels avoid the legend
+    wherever it actually sits) and the draw call (so the two agree). This is
+    the fix for a class of bug where the reservation was hardcoded to the
+    legend's *default* corner and didn't follow `legend.position` — leaving
+    a phantom reserved zone at the old spot and the real legend unprotected.
+
+    Mirrors draw_legend's layout math: 285px width, 38px title row +
+    n*28px entries + 14px pad, with a 14px pad bleed on every side. Top
+    placements clear the title cartouche band (y≈142) when one is present.
+    Returns (lx, ly, reserve_box).
+    """
+    legend_w = 285
+    legend_h = 38 + n_entries * 28 + 14
+    margin = 15
+    cartouche_bottom = 142
+    top_y = (cartouche_bottom + margin) if cartouche_on else (border + margin + 14)
+    pos = str(legend_cfg.get("position", "bottom-left"))
+    if pos == "top-left":
+        lx, ly = border + margin, top_y
+        box = (lx - margin, ly - margin, lx + legend_w, ly + legend_h)
+    elif pos == "top-right":
+        lx, ly = cw - border - legend_w - margin, top_y
+        box = (lx - margin, ly - margin, lx + legend_w, ly + legend_h)
+    elif pos == "bottom-right":
+        lx, ly = cw - border - legend_w - margin, ch - border - legend_h - margin
+        box = (lx - margin, ly - margin, lx + legend_w, ly + legend_h)
+    else:  # bottom-left (default)
+        # Anchor AND reservation box are the exact historical values, so
+        # existing maps (default legend) render pixel-identically.
+        lx, ly = border + 15, ch - border - 200
+        box = (border + 5, ch - border - 260, border + 320, ch - border - 5)
+    return lx, ly, box
+
+
 def _build_road_highlight_styles(base_styles: dict) -> dict:
     """Derive a thinner, brighter "highlight" style dict for re-stamping
     major roads over contamination. Only `interstate` and `us_highway`
@@ -676,7 +716,21 @@ def render_map(
         cart_w = title_w + 60
         cart_x = (cw - cart_w) // 2
         placer.reserve((cart_x, 2, cart_x + cart_w, 150))
-        placer.reserve((border + 5, ch - border - 260, border + 320, ch - border - 5))
+        # Reserve the legend box at its CONFIGURED position (not a hardcoded
+        # corner) so the placer keeps labels off the legend wherever it sits
+        # — and, crucially, doesn't reserve a phantom zone where the legend
+        # no longer is. Shared with the draw call below via _legend_placement.
+        _legend_cfg = cfg.get("legend", {})
+        _legend_entries = _legend_cfg.get("entries", [])
+        if _legend_entries:
+            _cart_on = bool(
+                cfg.get("decoration", {}).get("cartouche", {}).get("enabled", True)
+                and title_text
+            )
+            _, _, _legend_box = _legend_placement(
+                _legend_cfg, len(_legend_entries), _cart_on, cw, ch, border
+            )
+            placer.reserve(_legend_box)
         # Compass reservation: enlarged to match the resolution-aware
         # compass_r computed below (max(55, min(cw,ch)/22)). Reserve a
         # square ~3x compass_r so labels can't crowd against it.
@@ -1030,38 +1084,19 @@ def render_map(
 
         # Legend (kept under cfg.legend for backward compat — not nested
         # under cfg.decoration, since legend entries are already a top-level
-        # YAML block in every existing config).
+        # YAML block in every existing config). Position is config-driven; the
+        # anchor is computed by _legend_placement, the SAME helper the placer
+        # reservation uses above, so the reserved box and the drawn plaque
+        # always agree.
         legend_cfg = cfg.get("legend", {})
         legend_entries = legend_cfg.get("entries", [])
         if legend_entries:
-            # Position is config-driven. The default ("bottom-left") keeps the
-            # exact historical anchor so existing maps render pixel-identically;
-            # the other corners compute an anchor from the legend's measured
-            # height (mirrors draw_legend's own layout math: 38px title row +
-            # n*28px entries + 14px pad, with a 14px pad bleed on every side).
-            legend_pos = str(legend_cfg.get("position", "bottom-left"))
-            legend_w = 285                      # matches draw_legend default width
-            n_entries = len(legend_entries)
-            legend_h = 38 + n_entries * 28 + 14
-            margin = 15
-            # Top placements must clear the title cartouche. It's centered at
-            # the top spanning y≈2..142 (draw_title_cartouche anchors at y=22
-            # with a 120px box). A wide subtitle reaches into both top corners
-            # at that height, so when the cartouche is on we drop top-anchored
-            # legends just below it. Without a cartouche, hug the inner border.
             cartouche_on = bool(
                 (deco_cfg.get("cartouche") or {}).get("enabled", True) and title_text
             )
-            CARTOUCHE_BOTTOM = 142
-            top_y = (CARTOUCHE_BOTTOM + margin) if cartouche_on else (border + margin + 14)
-            if legend_pos == "top-left":
-                lx, ly = border + margin, top_y
-            elif legend_pos == "top-right":
-                lx, ly = cw - border - legend_w - margin, top_y
-            elif legend_pos == "bottom-right":
-                lx, ly = cw - border - legend_w - margin, ch - border - legend_h - margin
-            else:  # bottom-left (default — unchanged historical placement)
-                lx, ly = border + 15, ch - border - 200
+            lx, ly, _ = _legend_placement(
+                legend_cfg, len(legend_entries), cartouche_on, cw, ch, border
+            )
             final, draw = draw_legend(
                 final, lx, ly, legend_entries, color_map,
                 title_font=fonts["legend_title"],
